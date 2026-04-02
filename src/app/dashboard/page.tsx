@@ -43,7 +43,7 @@ export default function Dashboard() {
 
     useSocket(activeBooking?.sportName, () => {
         fetchActiveBooking();
-    }, 'booking_status_changed');
+    }, 'availability_changed');
 
     const fetchActiveBooking = useCallback(async () => {
         if (!user?.id) return;

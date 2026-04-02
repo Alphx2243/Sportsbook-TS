@@ -6,16 +6,26 @@ import { ActionResponse } from '@/interfaces'
 
 async function notifySocketUpdate(sportName: string, type: string = 'availability_changed') {
     const url = `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3005'}/notify-update`;
-    console.log(`Notifying socket server at ${url} for sport: ${sportName} (Type: ${type})`);
+    const secret = process.env.SOCKET_INTERNAL_SECRET || 'your_default_secure_secret_here';
+
+    console.log(`[SOCKET] Notifying ${url} for ${sportName} (Type: ${type})`);
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-socket-secret': secret
+            },
             body: JSON.stringify({ sportName, type }),
         });
-        console.log(`Socket server response: ${response.status} ${response.statusText}`);
+        
+        if (!response.ok) {
+            console.error(`[SOCKET] Server returned ${response.status}: ${response.statusText}`);
+        } else {
+            console.log(`[SOCKET] Broadcast successful`);
+        }
     } catch (error) {
-        console.error('Failed to notify socket server:', error);
+        console.error('[SOCKET] Failed to notify server:', error);
     }
 }
 
