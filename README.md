@@ -44,3 +44,11 @@ CLOUDINARY_API_SECRET=""
 ```bash
 npm run dev # To run the project
 ```
+
+## Test credentials:
+1) User:
+  Email : alphx@iiitd.ac.in
+  Password : aforapple 
+3) Admin:
+  Email : admin@iiitd.ac.in
+  Password : aforapple
