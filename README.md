@@ -9,15 +9,17 @@ The project is divided into three specialized platforms for optimal performance:
 - **Socket Server**: Centralized WebSocket hub for the entire platform.
 
 
-## ✨ Key Features
-### 🚀 Real-time
+## Key Features
+### Real-time
 *   **Live Scoreboards**: Instant match updates across the campus.
 *   **Realtime Occupancy visiblity**: Heatmaps and live density tracking.
 *   **Realtime Availability of resources**: Immediate updates for booking changes.
-### 🗓️ Scheduling
+### Scheduling
 *   **QR-Integrated Check-ins**: Automated check-in/out via QR codes.
 *   **Conflict-Free Booking**: Robust system to prevent overlapping sessions.
 *   **Relaible Returns**: Integrated workflow for sports equipment management.
+### Security
+*   **Rate Limiting**: Custom Next.js Edge Middleware restricts traffic to prevent API abuse, allowing a maximum of 30 requests per minute per IP, and a global cap of 500 requests per minute.
 ## 🛠️ The Tech Stack
 - **Frontend**: Next.js 15 (App Router), React 19, Framer Motion
 - **Database**: PostgreSQL (Prisma ORM)
@@ -47,8 +49,7 @@ npm run dev # To run the project
 
 ## Test credentials:
 1) User:
-  Email : alphx@iiitd.ac.in
-  Password : aforapple 
-3) Admin:
-  Email : admin@iiitd.ac.in
-  Password : aforapple
+
+    Email : alphx@iiitd.ac.in
+
+    Password : aforapple 
