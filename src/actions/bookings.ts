@@ -23,33 +23,37 @@ async function notifySocketUpdate(sportName: string, type: string = 'availabilit
 
 export async function createBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
-        const existingBooking = await prisma.booking.findFirst({
-            where: {
-                userId: data.userId,
-                status: { in: ['pending', 'active', 'returned'] }
+        const result = await prisma.$transaction(async (tx: any) => {
+            await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId} FOR UPDATE`;
+
+            const existingBooking = await tx.booking.findFirst({
+                where: {
+                    userId: data.userId,
+                    status: { in: ['pending', 'active', 'returned'] }
+                }
+            })
+
+            if (existingBooking) {
+                const msg = existingBooking.status === 'active'
+                    ? 'You already have an active booking.'
+                    : 'Your previous session return is pending admin approval.';
+                throw new Error(`${msg} Please return items and wait for admin approval first.`)
             }
-        })
 
-        if (existingBooking) {
-            const msg = existingBooking.status === 'active'
-                ? 'You already have an active booking.'
-                : 'Your previous session return is pending admin approval.';
-            return { success: false, error: `${msg} Please return items and wait for admin approval first.` }
-        }
-
-        const booking = await prisma.booking.create({
-            data: {
-                userId: data.userId, sportName: data.sportName,
-                numberOfPlayers: parseInt(String(data.numberOfPlayers || 0)),
-                startTime: data.startTime, endTime: data.endTime,
-                date: data.date, qrDetail: data.qrdetail,
-                status: data.status, endDate: data.enddate,
-                courtNo: data.CourtNo,
-            },
+            return await tx.booking.create({
+                data: {
+                    userId: data.userId, sportName: data.sportName,
+                    numberOfPlayers: parseInt(String(data.numberOfPlayers || 0)),
+                    startTime: data.startTime, endTime: data.endTime,
+                    date: data.date, qrDetail: data.qrdetail,
+                    status: data.status, endDate: data.enddate,
+                    courtNo: data.CourtNo,
+                },
+            })
         })
         revalidatePath('/')
         await notifySocketUpdate(data.sportName, 'availability_changed');
-        return { success: true, data: booking }
+        return { success: true, data: result }
     }
     catch (error: any) {
         console.error('Create booking error:', error)
@@ -263,6 +267,8 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
 export async function secureBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
         const result = await prisma.$transaction(async (tx: any) => {
+            await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId} FOR UPDATE`;
+
             const existingBooking = await tx.booking.findFirst({
                 where: { userId: data.userId, status: { in: ['pending', 'active', 'returned'] } }
             })
