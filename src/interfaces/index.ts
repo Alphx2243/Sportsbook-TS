@@ -22,21 +22,37 @@ export interface Sport {
   id: string;
   name: string;
   numberOfCourts: number;
-  totalEquipments: string[];
-  equipmentsInUse: string[];
   courtsInUse: number;
   courtData?: any;
   maxCapacity?: number | null;
   numPlayers?: number | null;
   createdAt: Date;
   updatedAt: Date;
+  equipments: Equipment[];
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  total: number;
+  inUse: number;
+  sportId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BookingEquipment {
+  id: string;
+  bookingId: string;
+  equipmentId: string;
+  count: number;
+  equipment?: Equipment;
 }
 
 export interface Booking {
   id: string;
   userId: string;
   sportName: string;
-  issuedEquipments: string[];
   numberOfPlayers: number;
   startTime: string;
   endTime: string;
@@ -48,6 +64,7 @@ export interface Booking {
   scanned: boolean;
   createdAt: Date;
   updatedAt: Date;
+  equipments?: BookingEquipment[];
 }
 
 export interface Match {
@@ -102,4 +119,29 @@ export interface GymLog {
 
 export interface EquipmentCounts {
   [key: string]: number;
+}
+
+export interface RateLimitResult {
+  success: boolean,
+  limit: number,
+  remaining: number,
+  reset: number
+}
+
+export interface CreateBookingInput {
+  userId: string;
+  sportName: string;
+  equipmentsIssued?: string[];
+  numberOfPlayers?: string | number;
+  startTime: string;
+  endTime: string;
+  date: string;
+  qrdetail?: string;
+  status: string;
+  enddate?: string | null;
+  CourtNo?: string | null;
+}
+
+export interface UpdateBookingInput extends Partial<CreateBookingInput> {
+  scanned?: boolean;
 }

@@ -2,34 +2,30 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { ActionResponse } from '@/interfaces'
+import { ActionResponse, CreateBookingInput, UpdateBookingInput } from '@/interfaces'
 
 async function notifySocketUpdate(sportName: string, type: string = 'availability_changed') {
     const url = `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3005'}/notify-update`;
-    const secret = process.env.SOCKET_INTERNAL_SECRET || 'your_default_secure_secret_here';
-
-    console.log(`[SOCKET] Notifying ${url} for ${sportName} (Type: ${type})`);
+    const secret = process.env.SOCKET_INTERNAL_SECRET;
+    if (!secret) {
+        console.error('[SOCKET] SOCKET_INTERNAL_SECRET is not set. Skipping notification.');
+        return;
+    }
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-socket-secret': secret
-            },
+            headers: { 'Content-Type': 'application/json', 'x-socket-secret': secret },
             body: JSON.stringify({ sportName, type }),
         });
-        
         if (!response.ok) {
             console.error(`[SOCKET] Server returned ${response.status}: ${response.statusText}`);
-        } else {
-            console.log(`[SOCKET] Broadcast successful`);
         }
     } catch (error) {
         console.error('[SOCKET] Failed to notify server:', error);
     }
 }
 
-export async function createBooking(data: any): Promise<ActionResponse> {
+export async function createBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
         const existingBooking = await prisma.booking.findFirst({
             where: {
@@ -48,8 +44,7 @@ export async function createBooking(data: any): Promise<ActionResponse> {
         const booking = await prisma.booking.create({
             data: {
                 userId: data.userId, sportName: data.sportName,
-                issuedEquipments: data.equipmentsIssued || [],
-                numberOfPlayers: parseInt(data.numberOfPlayers || 0),
+                numberOfPlayers: parseInt(String(data.numberOfPlayers || 0)),
                 startTime: data.startTime, endTime: data.endTime,
                 date: data.date, qrDetail: data.qrdetail,
                 status: data.status, endDate: data.enddate,
@@ -65,14 +60,13 @@ export async function createBooking(data: any): Promise<ActionResponse> {
     }
 }
 
-export async function updateBooking(id: string, data: any): Promise<ActionResponse> {
+export async function updateBooking(id: string, data: UpdateBookingInput): Promise<ActionResponse> {
     try {
         const booking = await prisma.booking.update({
             where: { id },
             data: {
                 userId: data.userId, sportName: data.sportName,
-                issuedEquipments: data.equipmentsIssued,
-                numberOfPlayers: data.numberOfPlayers ? parseInt(data.numberOfPlayers) : undefined,
+                numberOfPlayers: data.numberOfPlayers ? parseInt(String(data.numberOfPlayers)) : undefined,
                 startTime: data.startTime, endTime: data.endTime,
                 scanned: data.scanned, qrDetail: data.qrdetail,
                 status: data.status, endDate: data.enddate,
@@ -136,7 +130,7 @@ export async function getBookings(filters: { userId?: string; status?: string; d
 export async function extendBooking(bookingId: string, extensionMinutes: number): Promise<ActionResponse> {
     try {
         const updatedBooking = await prisma.$transaction(async (tx: any) => {
-            
+
             const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
             if (!booking) throw new Error('Booking not found');
 
@@ -176,48 +170,24 @@ export async function expireBooking(bookingId: string): Promise<ActionResponse> 
             }
 
             const [sportRow]: any = await tx.$queryRaw`SELECT * FROM "Sport" WHERE "name" = ${booking.sportName} FOR UPDATE`;
-            if (!sportRow) {
-                throw new Error('Associated Sport not found');
-            }
+            if (!sportRow) throw new Error('Associated Sport not found');
 
-            await tx.booking.update({
-                where: { id: bookingId },
-                data: { status: 'expired' }
-            });
+            await tx.booking.update({ where: { id: bookingId }, data: { status: 'expired' } });
 
-            const [sport]: any = await tx.$queryRaw`SELECT * FROM "Sport" WHERE "name" = ${booking.sportName} FOR UPDATE`;
-            if (!sport) {
-                throw new Error('Associated Sport not found');
-            }
-
-            
-            const issuedEq = booking.issuedEquipments || [];
-            let newEqInUse = [...(sport.equipmentsInUse || [])];
-            issuedEq.forEach((issued: any) => {
-                const [name, count] = issued.split(':');
-                const issuedCount = parseInt(count);
-                newEqInUse = newEqInUse.map((eq: any) => {
-                    const [eqName, eqCount] = eq.split(':');
-                    if (eqName === name) {
-                        const currentVal = parseInt(eqCount);
-                        return `${eqName}:${Math.max(0, currentVal - issuedCount)}`;
-                    }
-                    return eq;
+            // Return equipment to inventory via normalized relational tables
+            const bookingEquipments = await tx.bookingEquipment.findMany({ where: { bookingId } });
+            for (const be of bookingEquipments) {
+                await tx.equipment.update({
+                    where: { id: be.equipmentId },
+                    data: { inUse: { decrement: be.count } }
                 });
-            });
-
-            await tx.sport.update({
-                where: { id: sport.id },
-                data: {
-                    equipmentsInUse: newEqInUse
-                }
-            });
+            }
         });
         revalidatePath('/')
         revalidatePath('/dashboard')
         revalidatePath('/book-court')
 
-        
+
         const [bookingForSport]: any = await prisma.$queryRaw`SELECT "sportName" FROM "Booking" WHERE "id" = ${bookingId}`;
         if (bookingForSport) {
             await notifySocketUpdate(bookingForSport.sportName, 'availability_changed');
@@ -244,7 +214,7 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
                 throw new Error('Associated Sport not found');
             }
 
-            
+
             const courtNo = booking.courtNo;
             let newCourtData = sport.courtData || [];
             newCourtData = newCourtData.map((item: any, i: number) => {
@@ -275,7 +245,7 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
         revalidatePath('/dashboard')
         revalidatePath('/book-court')
 
-        
+
         const [bookingForSport]: any = await prisma.$queryRaw`SELECT "sportName" FROM "Booking" WHERE "id" = ${bookingId}`;
         if (bookingForSport) {
             await notifySocketUpdate(bookingForSport.sportName, 'availability_changed');
@@ -289,7 +259,7 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
     }
 }
 
-export async function secureBooking(data: any): Promise<ActionResponse> {
+export async function secureBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
         const result = await prisma.$transaction(async (tx: any) => {
             const existingBooking = await tx.booking.findFirst({
@@ -308,7 +278,7 @@ export async function secureBooking(data: any): Promise<ActionResponse> {
             }
             const isCapacityBased = sport.maxCapacity && sport.maxCapacity > 0
             const alreadyBookedPlayers = sport.numPlayers || 0
-            const numPlayers = parseInt(data.numberOfPlayers || 0)
+            const numPlayers = Number(data.numberOfPlayers) || 0;
             const courtNo = data.CourtNo
             if (isCapacityBased) {
                 if (alreadyBookedPlayers + numPlayers > (sport.maxCapacity || 0)) {
@@ -317,7 +287,7 @@ export async function secureBooking(data: any): Promise<ActionResponse> {
             }
             else {
                 const cData = sport.courtData || []
-                const courtIndex = parseInt(courtNo) - 1
+                const courtIndex = Number(courtNo) - 1
                 if (courtIndex < 0 || courtIndex >= (sport.numberOfCourts || 0)) {
                     throw new Error('Court is not available!')
                 }
@@ -339,33 +309,8 @@ export async function secureBooking(data: any): Promise<ActionResponse> {
                     }
                 })
             }
-            if (data.equipmentsIssued && data.equipmentsIssued.length > 0) {
-                let currentEqInUse = sport.equipmentsInUse || []
-                const newEqInUse = [...currentEqInUse]
-
-                data.equipmentsIssued.forEach((issued: string) => {
-                    const [name, count] = issued.split(':')
-                    const issuedCount = parseInt(count)
-
-                    const eqIndex = newEqInUse.findIndex((eq: string) => eq.startsWith(name + ':'))
-                    if (eqIndex !== -1) {
-                        const [eqName, eqCount] = newEqInUse[eqIndex].split(':')
-                        newEqInUse[eqIndex] = `${eqName}:${parseInt(eqCount) + issuedCount}`
-                    }
-                    else {
-                        newEqInUse.push(`${name}:${issuedCount}`)
-                    }
-                })
-
-                await tx.sport.update({
-                    where: { id: sport.id },
-                    data: {
-                        equipmentsInUse: newEqInUse,
-                        ...(isCapacityBased && { numPlayers: { increment: numPlayers } })
-                    }
-                })
-            }
-            else if (isCapacityBased) {
+            // Handle capacity-based sports player count
+            if (isCapacityBased) {
                 await tx.sport.update({
                     where: { id: sport.id }, data: { numPlayers: { increment: numPlayers } }
                 })
@@ -374,7 +319,6 @@ export async function secureBooking(data: any): Promise<ActionResponse> {
             const booking = await tx.booking.create({
                 data: {
                     userId: data.userId, sportName: data.sportName,
-                    issuedEquipments: data.equipmentsIssued || [],
                     numberOfPlayers: numPlayers, startTime: data.startTime,
                     endTime: data.endTime, date: data.date,
                     qrDetail: data.qrdetail, status: data.status,
@@ -382,18 +326,26 @@ export async function secureBooking(data: any): Promise<ActionResponse> {
                 },
             });
 
-            
+            // Issue equipment using normalized relational tables
+            if (data.equipmentsIssued && data.equipmentsIssued.length > 0) {
+                for (const issued of data.equipmentsIssued) {
+                    const [name, countStr] = issued.split(':');
+                    const issuedCount = parseInt(countStr);
+                    const equipment = await tx.equipment.findFirst({ where: { name, sportId: sport.id } });
+                    if (!equipment) throw new Error(`Equipment '${name}' not found for this sport.`);
+                    if (equipment.inUse + issuedCount > equipment.total) throw new Error(`Not enough '${name}' available.`);
+                    await tx.equipment.update({ where: { id: equipment.id }, data: { inUse: { increment: issuedCount } } });
+                    await tx.bookingEquipment.create({ data: { bookingId: booking.id, equipmentId: equipment.id, count: issuedCount } });
+                }
+            }
+
             const qrObj = JSON.parse(data.qrdetail || '{}');
             qrObj.bookingId = booking.id;
-            
-            return await tx.booking.update({
-                where: { id: booking.id },
-                data: { qrDetail: JSON.stringify(qrObj) }
-            });
+            return await tx.booking.update({ where: { id: booking.id }, data: { qrDetail: JSON.stringify(qrObj) } });
         })
         revalidatePath('/')
 
-        
+
         await notifySocketUpdate(data.sportName, 'availability_changed');
 
         return { success: true, data: result }

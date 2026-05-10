@@ -114,7 +114,7 @@ export default function Navbar() {
                           key={f}
                           href={formatPath(f)}
                           onClick={() => setDesktopOpen(false)}
-                          className="block px-4 py-3 text-sm text-foreground hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer"
+                          className="block px-4 py-3 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                         >
                           {f}
                         </Link>
@@ -141,12 +141,12 @@ export default function Navbar() {
                         className="absolute left-0 top-full mt-2 w-48 h-48 flex items-center justify-center glass-panel rounded-xl z-50"
                       >
                         {qrUrl ? (
-                          <Image 
-                            src={qrUrl} 
-                            alt="QR Code" 
+                          <Image
+                            src={qrUrl}
+                            alt="QR Code"
                             width={160}
                             height={160}
-                            className="h-[160px] w-[160px] object-contain rounded-lg" 
+                            className="h-[160px] w-[160px] object-contain rounded-lg"
                           />
                         ) : (
                           <p className="text-sm text-gray-400">Loading QR...</p>
@@ -162,9 +162,9 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full border border-white/10 dark:border-white/10 border-black/5 bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-full border border-white/10 dark:border-white/10 border-black/5 bg-white/5 hover:bg-accent transition-colors cursor-pointer"
             >
-              {theme === 'dark' ? <Moon className="w-5 h-5 text-blue-200" /> : <Sun className="w-5 h-5 text-yellow-500" />}
+              {theme === 'dark' ? <Moon className="w-5 h-5 text-primary" /> : <Sun className="w-5 h-5 text-secondary" />}
             </button>
             <button
               onClick={() => navigateTo(user ? '/profile' : '/login')}
@@ -262,12 +262,12 @@ export default function Navbar() {
                         className="mt-2 flex justify-center py-4 bg-black/40 rounded-lg"
                       >
                         {qrUrl ? (
-                          <Image 
-                            src={qrUrl} 
-                            alt="QR Code" 
+                          <Image
+                            src={qrUrl}
+                            alt="QR Code"
                             width={150}
                             height={150}
-                            className="h-[150px] w-[150px] object-contain rounded" 
+                            className="h-[150px] w-[150px] object-contain rounded"
                           />
                         ) : (
                           <p className="text-gray-500">Loading QR...</p>

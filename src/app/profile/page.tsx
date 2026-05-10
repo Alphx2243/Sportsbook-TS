@@ -118,8 +118,8 @@ export default function ProfilePage() {
     };
     if (loading || userLoading) {
         return (
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -237,7 +237,7 @@ export default function ProfilePage() {
                     {isEditing && (
                         <motion.button
                             type="submit"
-                            className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground font-bold py-4 rounded-xl text-lg shadow-[0_0_20px_-5px_var(--color-secondary)]"
+                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-xl text-lg shadow-[0_0_20px_-5px_var(--color-primary)] cursor-pointer"
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
                         >

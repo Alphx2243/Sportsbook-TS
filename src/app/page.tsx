@@ -18,32 +18,32 @@ import { Card, CardContent } from '@/components/ui/Card'
 
 const features = [
   {
-    icon: <CalendarIcon className="w-8 h-8 text-cyan-400 animate-float" />,
+    icon: <CalendarIcon className="w-8 h-8 text-brand-accent animate-float" />,
     title: 'Easy Booking',
     description: 'Book courts in seconds with our intuitive calendar and time-slot selector.',
   },
   {
-    icon: <ActivityIcon className="w-8 h-8 text-blue-500 animate-float" />,
+    icon: <ActivityIcon className="w-8 h-8 text-primary animate-float" />,
     title: 'Live Scoring',
     description: 'Track real-time scores for all matches happening on campus.',
   },
   {
-    icon: <MapPinIcon className="w-8 h-8 text-purple-500 animate-float" />,
+    icon: <MapPinIcon className="w-8 h-8 text-secondary animate-float" />,
     title: 'Occupancy Map',
     description: 'See which facilities are available with our interactive occupancy heatmap.',
   },
   {
-    icon: <UsersIcon className="w-8 h-8 text-pink-500 animate-float" />,
+    icon: <UsersIcon className="w-8 h-8 text-secondary animate-float" />,
     title: 'Team Building',
     description: 'Find players and build your team based on skill level and availability.',
   },
   {
-    icon: <ClockIcon className="w-8 h-8 text-emerald-400 animate-float" />,
+    icon: <ClockIcon className="w-8 h-8 text-brand-accent animate-float" />,
     title: 'QR Check-in',
     description: 'Quick and easy check-in with QR code scanning for confirmed bookings.',
   },
   {
-    icon: <Trophy className="w-8 h-8 text-yellow-400 animate-float" />,
+    icon: <Trophy className="w-8 h-8 text-primary animate-float" />,
     title: 'Analytics',
     description: 'Easily check most occupied time of every sport.',
   },
@@ -132,7 +132,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-white">
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     )
@@ -175,7 +175,7 @@ export default function Home() {
                 variant="outline"
                 size="lg"
                 onClick={() => router.push('/dashboard')}
-                className="text-lg px-8 border-foreground/20 hover:bg-foreground/10 text-foreground"
+                className="text-lg px-8 border-foreground/10 hover:bg-muted text-foreground"
               >
                 Explore Features
               </Button>

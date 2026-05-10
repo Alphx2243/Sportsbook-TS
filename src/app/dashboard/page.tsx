@@ -141,14 +141,14 @@ export default function Dashboard() {
 
     if (authLoading || !user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background text-white">
+            <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     const quickStats = [
-        { label: 'Active Bookings', value: activeBooking ? '1' : '0', icon: Calendar, color: 'text-cyan-400' },
+        { label: 'Active Bookings', value: activeBooking ? '1' : '0', icon: Calendar, color: 'text-brand-accent' },
     ];
 
     const quickActions = [
@@ -267,8 +267,8 @@ export default function Dashboard() {
                                                     <div className="space-y-1 col-span-2 md:col-span-1">
                                                         <p className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Status</p>
                                                         <div className="flex items-center gap-2 justify-center md:justify-start">
-                                                            <div className={`w-2 h-2 rounded-full ${activeBooking.status === 'active' ? 'bg-green-500 animate-pulse' : activeBooking.status === 'pending' ? 'bg-blue-500 animate-pulse' : 'bg-yellow-500'}`} />
-                                                            <p className={`text-lg font-bold capitalize ${activeBooking.status === 'active' ? 'text-green-400' : activeBooking.status === 'pending' ? 'text-blue-400' : 'text-yellow-400'}`}>
+                                                            <div className={`w-2 h-2 rounded-full ${activeBooking.status === 'active' ? 'bg-green-500' : activeBooking.status === 'pending' ? 'bg-primary' : 'bg-secondary'}`} />
+                                                            <p className={`text-lg font-bold capitalize ${activeBooking.status === 'active' ? 'text-green-500' : activeBooking.status === 'pending' ? 'text-primary' : 'text-secondary'}`}>
                                                                 {activeBooking.status === 'returned' ? 'Awaiting Approval' : activeBooking.status === 'pending' ? 'Awaiting Scan' : activeBooking.status}
                                                             </p>
                                                         </div>

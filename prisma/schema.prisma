@@ -27,37 +27,58 @@ model User {
 }
 
 model Sport {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  numberOfCourts  Int
-  totalEquipments String[] 
-  equipmentsInUse String[] @default([]) 
-  courtsInUse     Int      @default(0)
-  courtData       Json?
-  maxCapacity     Int? 
-  numPlayers      Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String   @unique
+  numberOfCourts Int
+  courtsInUse    Int      @default(0)
+  courtData      Json?
+  maxCapacity    Int?
+  numPlayers     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  equipments     Equipment[]
+}
+
+model Equipment {
+  id        String   @id @default(uuid())
+  name      String
+  total     Int      @default(0)
+  inUse     Int      @default(0)
+  sportId   String
+  sport     Sport    @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  bookings  BookingEquipment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BookingEquipment {
+  id          String    @id @default(uuid())
+  bookingId   String
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  count       Int       @default(1)
 }
 
 model Booking {
-  id               String   @id @default(uuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
-  sportName        String
-  issuedEquipments String[] 
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  sportName       String
+  numberOfPlayers Int
+  startTime       String
+  endTime         String
+  date            String
+  qrDetail        String?
+  status          String
+  endDate         String?
+  courtNo         String?
+  scanned         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  numberOfPlayers  Int
-  startTime        String
-  endTime          String
-  date             String
-  qrDetail         String?
-  status           String
-  endDate          String?
-  courtNo          String?
-  scanned          Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  equipments      BookingEquipment[]
 }
 
 model Match {

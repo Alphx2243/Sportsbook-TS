@@ -47,12 +47,10 @@ export default function AgniCodersBooking() {
     setSelectedIndex(idx);
     setNumPlayers(1);
     const inUse: EquipmentCounts = {};
-    const eqInUseArr = sport.equipmentsInUse || [];
-    eqInUseArr.forEach((item: any) => {
-      const [name, count] = item.split(":");
-      inUse[name] = parseInt(count, 10);
+    const equipments = sport.equipments || [];
+    equipments.forEach((eq: any) => {
+      inUse[eq.name] = eq.inUse;
     });
-    console.log(inUse);
     setInitialInUse(inUse);
     setEquipmentCounts({ ...inUse });
 
@@ -72,8 +70,8 @@ export default function AgniCodersBooking() {
 
   const changeEquipment = (name: string, delta: number) => {
     setEquipmentCounts((prev) => {
-      const totalStr = sportsData[selectedIndex].totalEquipments.find((i) => i.startsWith(name + ":"));
-      const total = totalStr ? parseInt(totalStr.split(":")[1], 10) : 0;
+      const eq = sportsData[selectedIndex].equipments.find((i: any) => i.name === name);
+      const total = eq ? eq.total : 0;
 
       const usedInit = initialInUse[name] || 0;
       const maxAvailable = total - usedInit;
@@ -88,7 +86,6 @@ export default function AgniCodersBooking() {
     try {
       const now = new Date(); 
       const currentdate = now.toLocaleDateString("en-CA");
-      console.log("Date Now -> ", currentdate);
       const currenttime = now.toTimeString().split(" ")[0];
       const endDateTime = new Date(now.getTime() + duration * 60 * 1000);
       const Enddate = endDateTime.toLocaleDateString("en-CA");
@@ -123,7 +120,6 @@ export default function AgniCodersBooking() {
           ),
         }),
       };
-      console.log(payload);
       const result = await secureBooking(payload);
 
       if (result.success) {
@@ -247,11 +243,12 @@ export default function AgniCodersBooking() {
           <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground mb-4">Equipment Available</h3>
             <div className="space-y-3">
-              {sportsData[selectedIndex]?.totalEquipments.map((item: string) => {
-                const [name, total] = item.split(":");
+              {sportsData[selectedIndex]?.equipments.map((eq: any) => {
+                const name = eq.name;
+                const total = eq.total;
                 const used = equipmentCounts[name] || 0;
                 const init = initialInUse[name] || 0;
-                const maxAvail = parseInt(total, 10) - init;
+                const maxAvail = total - init;
                 return (
                   <div key={name} className="flex justify-between items-center bg-muted/30 p-3 rounded-lg border border-border/50">
                     <span className="font-medium text-muted-foreground dark:text-gray-300">{name} <span className="text-xs text-muted-foreground/80 dark:text-gray-500 ml-1">(Max: {maxAvail})</span></span>
@@ -310,4 +307,3 @@ export default function AgniCodersBooking() {
     </div>
   );
 }
-

@@ -7,7 +7,8 @@ import { ActionResponse } from '@/interfaces'
 export async function getSports(): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
         const sports = await prisma.sport.findMany({ 
-            orderBy: { name: 'asc' }
+            orderBy: { name: 'asc' },
+            include: { equipments: true }
         })
         return { success: true, data: { documents: sports, total: sports.length } }
     }

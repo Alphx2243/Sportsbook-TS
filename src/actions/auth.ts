@@ -7,7 +7,12 @@ import { cookies } from 'next/headers'
 import { v4 as uuidv4 } from 'uuid'
 import { ActionResponse } from '@/interfaces'
 
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || 'supersecretkey123')
+import nodemailer from 'nodemailer';
+
+if (!process.env.JWT_SECRET) {
+    throw new Error('FATAL: JWT_SECRET environment variable is not set.');
+}
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function createAccount({ email, password, name, phone, rollNumber, sportsExperience, qrCodePath }: {
     email: string;
@@ -195,7 +200,6 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 async function sendResetEmail(email: string, link: string) {
-    const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT || '587'),
