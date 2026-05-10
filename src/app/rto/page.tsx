@@ -45,7 +45,6 @@ const SportSelector = ({ value, onChange }: { value: string; onChange: (val: str
 const OccupancyCard = ({ info }: { info: any }) => {
   if (!info || !info.name) return null;
 
-  const eqInUse = parseList(info.equipmentsInUse);
   const totalPlayers = info.numPlayers || 0;
   const rate = info.maxCapacity
     ? Math.round(((info.numPlayers || 0) / info.maxCapacity) * 100)
@@ -57,11 +56,11 @@ const OccupancyCard = ({ info }: { info: any }) => {
   const statusBg = rate < 50 ? "bg-emerald-500/10 border-emerald-500/20" : rate < 80 ? "bg-amber-500/10 border-amber-500/20" : "bg-rose-500/10 border-rose-500/20";
   const statusText = rate < 50 ? "Available" : rate < 80 ? "Busy" : "Near Capacity";
 
-  const totalEq = parseList(info.totalEquipments);
-  const equipment = totalEq.map((e) => {
-    const used = eqInUse.find((u) => u.name === e.name)?.count || 0;
-    return { name: e.name, used, total: e.count };
-  });
+  const equipment = (info.equipments || []).map((e: any) => ({
+    name: e.name,
+    used: e.inUse || 0,
+    total: e.total || 0
+  }));
 
   return (
     <motion.div
@@ -113,7 +112,7 @@ const OccupancyCard = ({ info }: { info: any }) => {
 
         <div className="space-y-3">
           {equipment.length ? (
-            equipment.map((e) => (
+            equipment.map((e: any) => (
               <div key={e.name} className="space-y-1.5">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
                   <span className="text-gray-400">{e.name}</span>

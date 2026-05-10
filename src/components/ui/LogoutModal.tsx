@@ -20,7 +20,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: { isOpen: bo
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.9, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="relative w-full max-w-sm overflow-hidden glass-panel rounded-2xl shadow-2xl border border-white/10 mx-auto"
+                    className="relative w-full max-w-sm overflow-hidden bg-zinc-950/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 mx-auto"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500" />
