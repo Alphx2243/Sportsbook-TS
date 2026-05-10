@@ -4,46 +4,47 @@ import Image from "next/image";
 import { useSport } from "@/contexts/SportsContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSocket } from "@/hooks/useSocket";
-import { Users, Percent, User } from "lucide-react";
+import { Users, Percent, User, MapPin, Calendar, BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { getFilePreview } from '@/actions/files';
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from "recharts";
 
-const parseList = (arr: string[] = []) =>
-  (Array.isArray(arr) ? arr : []).map((item: string) => {
+const parseList = (arr: any) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((item: string) => {
+    if (typeof item !== 'string') return { name: 'Unknown', count: 0 };
     const [name, count] = item.split(":");
-    return { name: name.trim(), count: Number(count) || 0 };
+    return { name: (name || 'Unknown').trim(), count: Number(count) || 0 };
   });
+};
 
-const SportSelector = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void }) => {
+const SportSelector = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
   const { sports } = useSport();
-  const options = optionsFromSports(sports);
-
-  function optionsFromSports(sList: any[] | null) {
-    if (!sList) return [];
-    return sList.map((s: any) => s.name);
-  }
+  const options = useMemo(() => sports?.map((s: any) => s.name) || [], [sports]);
 
   return (
-    <div className="mb-8 text-center bg-white/5 inline-block px-6 py-3 rounded-xl border border-white/10 backdrop-blur-sm">
-      <label htmlFor="sportSelect" className="text-foreground font-medium mr-3">Select Sport:</label>
-      <select
-        id="sportSelect"
-        value={value}
-        onChange={onChange}
-        className="bg-transparent text-foreground outline-none font-bold cursor-pointer"
-      >
-        {options.map((s: any) => (
-          <option key={s} value={s} className="bg-zinc-900">{s}</option>
-        ))}
-      </select>
+    <div className="flex flex-wrap justify-center gap-3 mb-10">
+      {options.map((s: string) => (
+        <button
+          key={s}
+          onClick={() => onChange(s)}
+          className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border ${value === s
+            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
+            : "bg-white/5 text-gray-400 border-white/5 hover:border-white/20 hover:bg-white/10"
+            }`}
+        >
+          {s}
+        </button>
+      ))}
     </div>
   );
 };
 
 const OccupancyCard = ({ info }: { info: any }) => {
-  if (!info || !info.equipmentsInUse) return null;
+  if (!info || !info.name) return null;
+
   const eqInUse = parseList(info.equipmentsInUse);
   const totalPlayers = info.numPlayers || 0;
   const rate = info.maxCapacity
@@ -52,176 +53,210 @@ const OccupancyCard = ({ info }: { info: any }) => {
       ? Math.round((info.courtsInUse / info.numberOfCourts) * 100)
       : 0;
 
-  const statusColor = rate < 50 ? "text-green-500" : rate < 80 ? "text-yellow-500" : "text-red-500";
-  const statusBg = rate < 50 ? "bg-green-500/10 border-green-500/20" : rate < 80 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-red-500/10 border-red-500/20";
-  const statusText = rate < 50 ? "Available" : rate < 80 ? "Busy" : "Full";
+  const statusColor = rate < 50 ? "text-emerald-400" : rate < 80 ? "text-amber-400" : "text-rose-400";
+  const statusBg = rate < 50 ? "bg-emerald-500/10 border-emerald-500/20" : rate < 80 ? "bg-amber-500/10 border-amber-500/20" : "bg-rose-500/10 border-rose-500/20";
+  const statusText = rate < 50 ? "Available" : rate < 80 ? "Busy" : "Near Capacity";
 
-  const equipment = parseList(info.totalEquipments).map((e) => {
+  const totalEq = parseList(info.totalEquipments);
+  const equipment = totalEq.map((e) => {
     const used = eqInUse.find((u) => u.name === e.name)?.count || 0;
     return { name: e.name, used, total: e.count };
   });
 
   return (
-    <div className="glass-panel rounded-2xl p-6 w-full max-w-lg shadow-xl hover:shadow-2xl transition-all hover:scale-[1.01]">
-      <div className="flex justify-between items-center border-b border-white/10 pb-4 mb-6">
-        <h2 className="text-2xl font-bold text-foreground">{info.name}</h2>
-        <span className={`${statusBg} ${statusColor} border px-3 py-1 rounded-full text-sm font-semibold`}>
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="glass-panel rounded-3xl p-8 w-full max-w-lg border border-white/5 shadow-2xl relative overflow-hidden group"
+    >
+      <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+        <Users size={120} />
+      </div>
+
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <p className="text-primary text-xs font-black uppercase tracking-widest mb-1">Live Metrics</p>
+          <h2 className="text-3xl font-black text-foreground tracking-tight">{info.name}</h2>
+        </div>
+        <span className={`${statusBg} ${statusColor} border px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider`}>
           {statusText}
         </span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white/5 rounded-xl p-4 flex items-center border border-white/5">
-          <div className="p-3 rounded-full bg-blue-500/10 mr-3">
-            <Users className="text-blue-500 h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-gray-400 text-sm">Students</p>
-            <p className="text-2xl font-bold text-foreground">{totalPlayers}</p>
-          </div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4 flex items-center border border-white/5">
-          <div className="p-3 rounded-full bg-purple-500/10 mr-3">
-            <Percent className="text-purple-500 h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-gray-400 text-sm">Occupancy</p>
-            <p className="text-2xl font-bold text-foreground">{rate}%</p>
-          </div>
-        </div>
-      </div>
-      <h3 className="text-primary font-semibold mb-3">Equipment Usage</h3>
-      <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-        {equipment.length ? (
-          equipment.map((e) => (
-            <div key={e.name} className="flex justify-between py-2 border-b border-white/5 last:border-0">
-              <span className="text-gray-400">{e.name}</span>
-              <span className="text-foreground font-semibold">{e.used} <span className="text-gray-500 text-sm">/ {e.total}</span></span>
+
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="bg-white/5 rounded-2xl p-5 border border-white/5 hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-blue-500/20">
+              <Users className="text-blue-400 h-5 w-5" />
             </div>
-          ))
-        ) : (
-          <p className="text-gray-500 text-sm">No equipment data available.</p>
-        )}
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Students</p>
+          </div>
+          <p className="text-3xl font-black text-foreground">{totalPlayers}</p>
+        </div>
+
+        <div className="bg-white/5 rounded-2xl p-5 border border-white/5 hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-purple-500/20">
+              <Percent className="text-purple-400 h-5 w-5" />
+            </div>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Occupancy</p>
+          </div>
+          <p className="text-3xl font-black text-foreground">{rate}%</p>
+        </div>
       </div>
-    </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="text-primary w-4 h-4" />
+          <h3 className="text-foreground text-sm font-black uppercase tracking-widest">Equipment Inventory</h3>
+        </div>
+
+        <div className="space-y-3">
+          {equipment.length ? (
+            equipment.map((e) => (
+              <div key={e.name} className="space-y-1.5">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-wider">
+                  <span className="text-gray-400">{e.name}</span>
+                  <span className="text-foreground">{e.used} / {e.total}</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(e.used / e.total) * 100}%` }}
+                    className={`h-full rounded-full ${e.used / e.total > 0.8 ? 'bg-rose-500' : 'bg-primary'}`}
+                  />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-4 text-center bg-white/5 rounded-xl border border-dashed border-white/10">
+              <p className="text-gray-500 text-xs font-medium">No equipment tracked for this sport</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
 const CourtVisualization = ({ info }: { info: any }) => {
-  if (!info || !info.equipmentsInUse) return null;
+  if (!info || !info.name) return null;
   const players = info.numPlayers || 0;
 
-  if (!players)
-    return (
-      <div className="glass-panel rounded-2xl p-6 w-full max-w-lg shadow-xl text-center flex flex-col justify-center">
-        <h3 className="text-2xl font-bold text-foreground mb-4">Court View</h3>
-        <div className="w-full h-60 bg-white/5 rounded-xl flex items-center justify-center text-gray-400 border border-white/5">
-          No active players to visualize.
-        </div>
-      </div>
-    );
-
-  const cols = Math.ceil(Math.sqrt(players));
-  const rows = Math.ceil(players / cols);
-  const spots = Array.from({ length: players }, (_, i) => {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    return { top: `${((row + 1) / (rows + 1)) * 100}%`, left: `${((col + 1) / (cols + 1)) * 100}%` };
-  });
-
   return (
-    <div className="glass-panel rounded-2xl p-6 w-full max-w-lg shadow-xl text-center">
-      <h3 className="text-2xl font-bold text-foreground mb-4">Court View</h3>
-      <div className="relative w-full h-60 bg-green-900/20 border-2 border-green-500/30 rounded-xl overflow-hidden shadow-inner">
-        {spots.map((pos, idx) => (
-          <div
-            key={idx}
-            className="absolute w-6 h-6 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2 shadow-lg flex items-center justify-center"
-            style={pos}
-          >
-            <User size={14} className="text-green-700" />
-          </div>
-        ))}
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="glass-panel rounded-3xl p-8 w-full max-w-lg border border-white/5 shadow-2xl relative"
+    >
+      <div className="flex items-center gap-2 mb-6">
+        <MapPin className="text-primary w-4 h-4" />
+        <h3 className="text-foreground text-sm font-black uppercase tracking-widest">Interactive Court View</h3>
       </div>
-    </div>
+
+      <div className="relative w-full h-72 bg-emerald-950/20 border-2 border-emerald-500/20 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+        {players > 0 ? (
+          <div className="relative w-full h-full p-8 grid grid-cols-4 sm:grid-cols-6 gap-4 items-center justify-items-center">
+            {Array.from({ length: Math.min(players, 24) }).map((_, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                className="w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center ring-4 ring-emerald-500/10"
+              >
+                <User size={16} className="text-emerald-700" />
+              </motion.div>
+            ))}
+            {players > 24 && (
+              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-[10px] font-black text-primary border border-primary/30">
+                +{players - 24}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 opacity-30">
+            <Users size={48} className="text-gray-400" />
+            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">No active players</p>
+          </div>
+        )}
+        <div className="absolute inset-0 border-x-[1px] border-white/5 pointer-events-none" />
+        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/5 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border border-white/5 rounded-full pointer-events-none" />
+      </div>
+
+      <p className="mt-4 text-[10px] text-gray-500 text-center font-bold uppercase tracking-widest">
+        Visual representation of current facility load
+      </p>
+    </motion.div>
   );
 };
 
 const OccupancyLocation = ({ info }: { info: any }) => {
-  
-  if (info && (info.name?.toLowerCase() !== "gym") && (info.name?.toLowerCase() !== "swimming")) return (
-    <div className="glass-panel w-full max-w-4xl mx-auto p-6 rounded-2xl mt-8">
-      <h3 className="text-primary text-xl font-bold mb-4 flex items-center gap-2">
-        COURT STATUS
-      </h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {(info.courtData || []).map((c: any, i: number) => {
+  const isGymOrSwim = info?.name?.toLowerCase() === "gym" || info?.name?.toLowerCase() === "swimming";
+  if (!info || isGymOrSwim) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-panel w-full max-w-4xl mx-auto p-8 rounded-3xl mt-10 border border-white/5"
+    >
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-2 h-8 bg-primary rounded-full" />
+        <h3 className="text-2xl font-black text-foreground tracking-tight uppercase">Zone Status</h3>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        {(info.courtData || []).map((c: string, i: number) => {
           const [name, status] = c.split(":");
-          const isOccupied = info.maxCapacity
-            ? info.numPlayers > 0
-            : status === "1";
+          const isOccupied = info.maxCapacity ? info.numPlayers > 0 : status === "1";
 
           return (
             <div
               key={i}
-              className={`p-4 rounded-xl border ${isOccupied
-                ? "bg-red-500/10 border-red-500/30"
-                : "bg-green-500/10 border-green-500/30"
-                } flex flex-col items-center justify-center text-center transition-all`}
+              className={`p-6 rounded-2xl border transition-all duration-500 hover:scale-105 ${isOccupied
+                ? "bg-rose-500/5 border-rose-500/20 shadow-lg shadow-rose-500/5"
+                : "bg-emerald-500/5 border-emerald-500/20 shadow-lg shadow-emerald-500/5"
+                } flex flex-col items-center justify-center text-center`}
             >
-              <span
-                className={`text-lg font-bold ${isOccupied ? "text-red-400" : "text-green-400"
-                  }`}
-              >
-                {name}
+              <div className={`w-3 h-3 rounded-full mb-3 ${isOccupied ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
+              <span className={`text-xl font-black tracking-tight ${isOccupied ? "text-rose-400" : "text-emerald-400"}`}>
+                {name || `Court ${i + 1}`}
               </span>
-              <span className="text-xs text-gray-400 mt-1">
-                {isOccupied ? "Occupied" : "Vacant"}
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mt-2">
+                {isOccupied ? "Reserved" : "Open"}
               </span>
             </div>
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
-  else return null;
 };
-
 
 const TimeTable = ({ sport }: { sport: string }) => {
   const [url, setUrl] = useState<any>(null);
-  useEffect(() => {
-    let alive = true;
-    if (sport) {
-      Promise.resolve(null)
-        .then(async (f: any) => {
-          if (f && alive) {
-            const previewUrl = await getFilePreview(f.$id);
-            setUrl(previewUrl);
-          }
-          else if (alive) setUrl(null);
-        })
-        .catch(() => alive && setUrl(null));
-    }
-    return () => { alive = false; };
-  }, [sport]);
+  const [loading, setLoading] = useState(false);
+
 
   return (
-    <div className="p-8 glass-panel rounded-2xl mt-8 w-full max-w-4xl mx-auto text-center">
-      <h2 className="text-2xl font-bold text-gradient-premium mb-6">Weekly Schedule</h2>
-      {url ? (
-        <Image
-          src={url}
-          alt="timetable"
-          width={800}
-          height={600}
-          className="w-full h-auto rounded-xl border border-white/10 shadow-2xl"
-        />
-      ) : (
-        <div className="w-full h-64 flex items-center justify-center bg-white/5 rounded-xl text-gray-400">
-          No schedule available for this sport.
-        </div>
-      )}
-    </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="p-10 glass-panel rounded-3xl mt-10 w-full max-w-4xl mx-auto text-center border border-white/5 shadow-2xl"
+    >
+      <div className="flex flex-col items-center gap-2 mb-8">
+        <Calendar className="text-primary w-8 h-8 mb-2" />
+        <h2 className="text-3xl font-black text-foreground tracking-tight">Weekly Schedule</h2>
+        <p className="text-gray-500 text-sm font-medium">Standard operating hours and reserved training slots</p>
+      </div>
+
+      <div className="w-full h-80 flex flex-col items-center justify-center bg-white/5 rounded-2xl text-gray-500 border border-dashed border-white/10 gap-4">
+        <AlertCircle size={40} className="opacity-20" />
+        <p className="font-bold uppercase tracking-widest text-xs">No active schedule found</p>
+      </div>
+    </motion.div>
   );
 };
 
@@ -253,71 +288,137 @@ const DataAnalysis = ({ sport }: { sport: string }) => {
   }, [sport]);
 
   const chartColors = {
-    stroke: isDark ? "#555" : "#ddd",
-    text: isDark ? "#aaa" : "#555",
-    tooltipBg: isDark ? "#111" : "#fff",
-    tooltipBorder: isDark ? "#333" : "#eee",
-    grid: isDark ? "#333" : "#eee",
-    bar: "#3b82f6"
+    stroke: isDark ? "#333" : "#eee",
+    text: isDark ? "#666" : "#999",
+    tooltipBg: isDark ? "rgba(10, 10, 10, 0.95)" : "#fff",
+    tooltipBorder: isDark ? "rgba(255, 255, 255, 0.1)" : "#eee",
+    grid: isDark ? "rgba(255, 255, 255, 0.03)" : "#f5f5f5",
+    primary: "#3b82f6",
+    secondary: "#8b5cf6"
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center p-40">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-      <div className="glass-panel p-6 rounded-2xl shadow-xl">
-        <h2 className="text-xl font-bold mb-6 text-center text-foreground">Weekly Attendance</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={weeklyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-            <XAxis dataKey="day" stroke={chartColors.text} />
-            <YAxis stroke={chartColors.text} />
-            <Tooltip
-              contentStyle={{ backgroundColor: chartColors.tooltipBg, borderColor: chartColors.tooltipBorder, borderRadius: '8px', color: isDark ? '#fff' : '#000' }}
-              cursor={{ fill: 'transparent' }}
-            />
-            <Legend wrapperStyle={{ color: chartColors.text }} />
-            <Bar dataKey="Students" fill={chartColors.bar} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="glass-panel p-6 rounded-2xl shadow-xl max-w-4xl mx-auto">
-        <h2 className="text-xl font-bold mb-6 text-center text-foreground">Peak Hours (Last 7 Days)</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={peakData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-            <XAxis dataKey="time" stroke={chartColors.text} />
-            <YAxis stroke={chartColors.text} />
-            <Tooltip
-              contentStyle={{ backgroundColor: chartColors.tooltipBg, borderColor: chartColors.tooltipBorder, borderRadius: '8px', color: isDark ? '#fff' : '#000' }}
-              cursor={{ fill: 'transparent' }}
-            />
-            <Legend wrapperStyle={{ color: chartColors.text }} />
-            <Bar dataKey="Users" fill="#8b5cf6" name="Average Users" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="max-w-6xl mx-auto py-10 space-y-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-panel p-10 rounded-3xl border border-white/5 shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-10">
+          <BarChart3 className="text-primary w-6 h-6" />
+          <h2 className="text-2xl font-black text-foreground tracking-tight uppercase">Weekly Attendance</h2>
+        </div>
+
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weeklyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="0" vertical={false} stroke={chartColors.grid} />
+              <XAxis
+                dataKey="day"
+                stroke={chartColors.text}
+                fontSize={12}
+                fontWeight="bold"
+                axisLine={false}
+                tickLine={false}
+                dy={15}
+              />
+              <YAxis
+                stroke={chartColors.text}
+                fontSize={12}
+                fontWeight="bold"
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: chartColors.tooltipBg,
+                  borderColor: chartColors.tooltipBorder,
+                  borderRadius: '16px',
+                  // backdropBlur: '12px',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '12px'
+                }}
+                itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase' }}
+                cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+              />
+              <Bar dataKey="Students" fill={chartColors.primary} radius={[6, 6, 0, 0]} barSize={40}>
+                {weeklyData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.Students > 20 ? chartColors.primary : 'rgba(59, 130, 246, 0.5)'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass-panel p-10 rounded-3xl border border-white/5 shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-10">
+          <Users className="text-purple-400 w-6 h-6" />
+          <h2 className="text-2xl font-black text-foreground tracking-tight uppercase">Average Load by Hour</h2>
+        </div>
+
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={peakData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="0" vertical={false} stroke={chartColors.grid} />
+              <XAxis
+                dataKey="time"
+                stroke={chartColors.text}
+                fontSize={10}
+                fontWeight="bold"
+                axisLine={false}
+                tickLine={false}
+                dy={15}
+              />
+              <YAxis
+                stroke={chartColors.text}
+                fontSize={12}
+                fontWeight="bold"
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: chartColors.tooltipBg,
+                  borderColor: chartColors.tooltipBorder,
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '12px'
+                }}
+                itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: '900' }}
+                cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+              />
+              <Bar dataKey="Users" fill={chartColors.secondary} radius={[6, 6, 0, 0]} barSize={30} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
     </div>
   );
 };
 
 export default function Occupancy() {
-  const { sports, refreshSports } = useSport();
+  const { sports, loading: sportsLoading, refreshSports } = useSport();
   const [selectedSport, setSelectedSport] = useState("");
   const [activeTab, setActiveTab] = useState("liveVacancy");
 
-  
   useSocket(selectedSport, () => {
     refreshSports(true);
   });
-
-
 
   useEffect(() => {
     if (sports && sports.length > 0 && !selectedSport) {
@@ -326,71 +427,90 @@ export default function Occupancy() {
   }, [sports, selectedSport]);
 
   const sportInfo = useMemo(
-    () => sports!.find((s: any) => s.name === selectedSport) || {} as any,
+    () => sports?.find((s: any) => s.name === selectedSport) || null,
     [sports, selectedSport]
   );
+
+  if (sportsLoading && !sports?.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground pt-[8rem] py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[20%] left-[-10%] w-[50%] h-[50%] bg-blue-600/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] bg-cyan-600/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[10%] left-[-5%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
       <div className="max-w-7xl mx-auto text-center relative z-10">
-        <h1 className="text-4xl md:text-5xl font-bold text-gradient-premium mb-8">Real-time Occupancy</h1>
-        <div className="flex justify-center gap-4 mb-8">
-          {[
-            { key: "liveVacancy", label: "Live Vacancy" },
-            { key: "timeTable", label: "Time Table" },
-            { key: "dataAnalysis", label: "Data Analysis" },
-          ].map((tabObj) => (
-            <button
-              key={tabObj.key}
-              onClick={() => setActiveTab(tabObj.key)}
-              className={`px-6 py-3 rounded-xl font-semibold cursor-pointer transition-all duration-300 ${activeTab === tabObj.key
-                ? "bg-primary text-white shadow-lg shadow-blue-500/20 scale-105"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                }`}
-            >
-              {tabObj.label}
-            </button>
-          ))}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12"
+        >
+          <h1 className="text-5xl md:text-7xl font-black text-gradient-premium mb-4 tracking-tighter">
+            LIVE OCCUPANCY
+          </h1>
+          <p className="text-gray-400 font-medium max-w-xl mx-auto">
+            Experience the pulse of the arena with real-time tracking, equipment analytics, and visual zone monitoring.
+          </p>
+        </motion.div>
+
+        <div className="flex justify-center mb-12">
+          <div className="p-1.5 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 flex gap-2">
+            {[
+              { key: "liveVacancy", label: "Live Stats", icon: <Users size={16} /> },
+              { key: "timeTable", label: "Schedule", icon: <Calendar size={16} /> },
+              { key: "dataAnalysis", label: "Analytics", icon: <BarChart3 size={16} /> },
+            ].map((tabObj) => (
+              <button
+                key={tabObj.key}
+                onClick={() => setActiveTab(tabObj.key)}
+                className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all duration-500 ${activeTab === tabObj.key
+                  ? "bg-primary text-white shadow-xl shadow-primary/20 scale-105"
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
+              >
+                {tabObj.icon}
+                {tabObj.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {activeTab === "liveVacancy" && (
-          <>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab + selectedSport}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+          >
             <SportSelector
               value={selectedSport}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSport(e.target.value)}
+              onChange={(val: string) => setSelectedSport(val)}
             />
-            <div className="flex flex-wrap gap-8 justify-center items-start">
-              <OccupancyCard info={sportInfo} />
-              <CourtVisualization info={sportInfo} />
-            </div>
-            <OccupancyLocation info={sportInfo} />
-          </>
-        )}
 
-        {activeTab === "timeTable" && (
-          <>
-            <SportSelector
-              value={selectedSport}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSport(e.target.value)}
-            />
-            <TimeTable sport={selectedSport} />
-          </>
-        )}
+            {activeTab === "liveVacancy" && (
+              <>
+                <div className="flex flex-wrap gap-8 justify-center items-start">
+                  <OccupancyCard info={sportInfo} />
+                  <CourtVisualization info={sportInfo} />
+                </div>
+                <OccupancyLocation info={sportInfo} />
+              </>
+            )}
 
-        {activeTab === "dataAnalysis" && (
-          <>
-            <SportSelector
-              value={selectedSport}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSport(e.target.value)}
-            />
-            <DataAnalysis sport={selectedSport} />
-          </>
-        )}
+            {activeTab === "timeTable" && <TimeTable sport={selectedSport} />}
+            {activeTab === "dataAnalysis" && <DataAnalysis sport={selectedSport} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

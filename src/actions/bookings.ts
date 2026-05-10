@@ -6,11 +6,7 @@ import { ActionResponse, CreateBookingInput, UpdateBookingInput } from '@/interf
 
 async function notifySocketUpdate(sportName: string, type: string = 'availability_changed') {
     const url = `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3005'}/notify-update`;
-    const secret = process.env.SOCKET_INTERNAL_SECRET;
-    if (!secret) {
-        console.error('[SOCKET] SOCKET_INTERNAL_SECRET is not set. Skipping notification.');
-        return;
-    }
+    const secret = process.env.SOCKET_INTERNAL_SECRET || 'your_default_secure_secret_here';
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -52,6 +48,7 @@ export async function createBooking(data: CreateBookingInput): Promise<ActionRes
             },
         })
         revalidatePath('/')
+        await notifySocketUpdate(data.sportName, 'availability_changed');
         return { success: true, data: booking }
     }
     catch (error: any) {
@@ -74,6 +71,7 @@ export async function updateBooking(id: string, data: UpdateBookingInput): Promi
             },
         })
         revalidatePath('/')
+        await notifySocketUpdate(data.sportName!, 'availability_changed');
         return { success: true, data: booking }
     }
     catch (error: any) {
@@ -84,8 +82,12 @@ export async function updateBooking(id: string, data: UpdateBookingInput): Promi
 
 export async function deleteBooking(id: string): Promise<ActionResponse> {
     try {
+        const booking = await prisma.booking.findUnique({ where: { id } });
         await prisma.booking.delete({ where: { id }, })
         revalidatePath('/')
+        if (booking) {
+            await notifySocketUpdate(booking.sportName, 'availability_changed');
+        }
         return { success: true, data: null }
     }
     catch (error: any) {
@@ -174,7 +176,6 @@ export async function expireBooking(bookingId: string): Promise<ActionResponse> 
 
             await tx.booking.update({ where: { id: bookingId }, data: { status: 'expired' } });
 
-            // Return equipment to inventory via normalized relational tables
             const bookingEquipments = await tx.bookingEquipment.findMany({ where: { bookingId } });
             for (const be of bookingEquipments) {
                 await tx.equipment.update({
@@ -309,7 +310,6 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
                     }
                 })
             }
-            // Handle capacity-based sports player count
             if (isCapacityBased) {
                 await tx.sport.update({
                     where: { id: sport.id }, data: { numPlayers: { increment: numPlayers } }
@@ -326,7 +326,6 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
                 },
             });
 
-            // Issue equipment using normalized relational tables
             if (data.equipmentsIssued && data.equipmentsIssued.length > 0) {
                 for (const issued of data.equipmentsIssued) {
                     const [name, countStr] = issued.split(':');
