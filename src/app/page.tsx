@@ -49,6 +49,67 @@ const features = [
   },
 ]
 
+const devs = [
+  {
+    name : "Kunal Budhiraja",
+    email : "kunal24313@iiitd.ac.in",
+  },
+  {
+    name : "Kirat Goel",
+    email : "kirat24303@iiitd.ac.in",
+  }
+]
+
+function DevelopersSection(){
+  return (
+    <section className="relative py-24 px-6 overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-5xl font-bold mb-6 text-gradient-premium"
+          >
+            Developers
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          >
+            Meet the developers
+          </motion.p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {devs.map((details, i) => (
+            <Card
+              key={i}
+              className="hover:bg-accent/5 transition-colors border-white/5 dark:border-white/5 border-black/5"
+            >
+              <CardContent className="p-8">
+                <div className="mb-6 p-3 bg-accent/10 w-fit text-xl rounded-xl border-b border-white/10 shadow-inner">
+                  {details.name}
+                </div>
+                <h3 className="text-md text-foreground mb-3">Contact- {details.email}</h3>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  ) 
+}
+
 function FeaturesSection() {
   return (
     <section className="relative py-24 px-6 overflow-hidden">
@@ -295,6 +356,7 @@ export default function Home() {
       </section>
 
       <FeaturesSection />
+      <DevelopersSection />
     </div>
   )
 }
