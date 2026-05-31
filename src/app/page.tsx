@@ -49,16 +49,16 @@ const features = [
   },
 ]
 
-const devs = [
-  {
-    name : "Kunal Budhiraja",
-    email : "kunal24313@iiitd.ac.in",
-  },
-  {
-    name : "Kirat Goel",
-    email : "kirat24303@iiitd.ac.in",
-  }
-]
+// const devs = [
+//   {
+//     name : "Kunal Budhiraja",
+//     email : "kunal24313@iiitd.ac.in",
+//   },
+//   {
+//     name : "Kirat Goel",
+//     email : "kirat24303@iiitd.ac.in",
+//   }
+// ]
 
 function DevelopersSection(){
   return (
@@ -90,7 +90,7 @@ function DevelopersSection(){
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {devs.map((details, i) => (
             <Card
               key={i}
@@ -104,7 +104,7 @@ function DevelopersSection(){
               </CardContent>
             </Card>
           ))}
-        </div>
+        </div> */}
       </div>
     </section>
   ) 
