@@ -3,10 +3,14 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { ActionResponse, CreateBookingInput, UpdateBookingInput } from '@/interfaces'
+import { fail, ok } from '@/lib/action-response'
+import { bookingUserSelect, ensureSelfOrAdmin, requireUser } from '@/lib/auth-utils'
+import { requireServerEnv } from '@/lib/env'
+import { bookingStatus, equipmentIssues, positiveInt, requiredString } from '@/lib/validation'
 
 async function notifySocketUpdate(sportName: string, type: string = 'availability_changed') {
     const url = `${process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3005'}/notify-update`;
-    const secret = process.env.SOCKET_INTERNAL_SECRET || 'your_default_secure_secret_here';
+    const secret = requireServerEnv('SOCKET_INTERNAL_SECRET');
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -23,6 +27,7 @@ async function notifySocketUpdate(sportName: string, type: string = 'availabilit
 
 export async function createBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
+        await ensureSelfOrAdmin(data.userId)
         const result = await prisma.$transaction(async (tx: any) => {
             await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId} FOR UPDATE`;
 
@@ -41,108 +46,113 @@ export async function createBooking(data: CreateBookingInput): Promise<ActionRes
             }
 
             return await tx.booking.create({
-                data: {
-                    userId: data.userId, sportName: data.sportName,
-                    numberOfPlayers: parseInt(String(data.numberOfPlayers || 0)),
-                    startTime: data.startTime, endTime: data.endTime,
-                    date: data.date, qrDetail: data.qrdetail,
-                    status: data.status, endDate: data.enddate,
-                    courtNo: data.CourtNo,
-                },
+                data: normalizeBookingCreateData(data),
             })
         })
         revalidatePath('/')
         await notifySocketUpdate(data.sportName, 'availability_changed');
-        return { success: true, data: result }
+        return ok(result)
     }
     catch (error: any) {
         console.error('Create booking error:', error)
-        return { success: false, error: error.message || 'Failed to create booking' }
+        return fail(error, 'Failed to create booking')
     }
 }
 
 export async function updateBooking(id: string, data: UpdateBookingInput): Promise<ActionResponse> {
     try {
+        const existing = await assertBookingAccess(id)
         const booking = await prisma.booking.update({
             where: { id },
             data: {
-                userId: data.userId, sportName: data.sportName,
-                numberOfPlayers: data.numberOfPlayers ? parseInt(String(data.numberOfPlayers)) : undefined,
-                startTime: data.startTime, endTime: data.endTime,
-                scanned: data.scanned, qrDetail: data.qrdetail,
-                status: data.status, endDate: data.enddate,
+                userId: data.userId !== undefined ? requiredString(data.userId, 'User ID') : undefined,
+                sportName: data.sportName !== undefined ? requiredString(data.sportName, 'Sport name') : undefined,
+                numberOfPlayers: data.numberOfPlayers ? positiveInt(data.numberOfPlayers, 'Number of players') : undefined,
+                startTime: data.startTime !== undefined ? requiredString(data.startTime, 'Start time', 20) : undefined,
+                endTime: data.endTime !== undefined ? requiredString(data.endTime, 'End time', 20) : undefined,
+                scanned: data.scanned,
+                qrDetail: data.qrdetail,
+                status: data.status !== undefined ? bookingStatus(data.status) : undefined,
+                endDate: data.enddate,
                 courtNo: data.CourtNo,
             },
         })
         revalidatePath('/')
-        await notifySocketUpdate(data.sportName!, 'availability_changed');
-        return { success: true, data: booking }
+        await notifySocketUpdate(data.sportName || existing.sportName, 'availability_changed');
+        return ok(booking)
     }
     catch (error: any) {
         console.error('Update booking error:', error)
-        return { success: false, error: error.message || 'Failed to update booking' }
+        return fail(error, 'Failed to update booking')
     }
 }
 
 export async function deleteBooking(id: string): Promise<ActionResponse> {
     try {
-        const booking = await prisma.booking.findUnique({ where: { id } });
-        await prisma.booking.delete({ where: { id }, })
+        const booking = await assertBookingAccess(id)
+        await prisma.booking.delete({ where: { id } })
         revalidatePath('/')
-        if (booking) {
-            await notifySocketUpdate(booking.sportName, 'availability_changed');
-        }
-        return { success: true, data: null }
+        await notifySocketUpdate(booking.sportName, 'availability_changed');
+        return ok(null)
     }
     catch (error: any) {
         console.error('Delete booking error:', error)
-        return { success: false, error: error.message || 'Failed to delete booking' }
+        return fail(error, 'Failed to delete booking')
     }
 }
 
 export async function getBooking(id: string): Promise<ActionResponse> {
     try {
-        const booking = await prisma.booking.findUnique({ where: { id }, })
-        if (!booking) return { success: false, error: 'Booking not found' }
-        return { success: true, data: booking }
+        const booking = await assertBookingAccess(id)
+        return ok(booking)
     }
     catch (error: any) {
         console.error('Get booking error:', error)
-        return { success: false, error: error.message || 'Failed to get booking' }
+        return fail(error, 'Failed to get booking')
     }
 }
 
 export async function getBookings(filters: { userId?: string; status?: string; date?: string; timeRange?: string } = {}): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
+        const actor = await requireUser()
+        if (filters.userId) {
+            await ensureSelfOrAdmin(filters.userId)
+        } else if (actor.role !== 'Admin') {
+            filters.userId = actor.id
+        }
+
         const where: any = {}
         if (filters.userId) where.userId = filters.userId
-        if (filters.status) where.status = filters.status
-        if (filters.date) where.date = filters.date
+        if (filters.status) where.status = bookingStatus(filters.status)
+        if (filters.date) where.date = requiredString(filters.date, 'Date', 20)
         if (filters.timeRange) {
             where.startTime = { lte: filters.timeRange }
             where.endTime = { gt: filters.timeRange }
         }
         const bookings = await prisma.booking.findMany({
-            where, orderBy: { createdAt: 'desc' }, include: { user: true }
+            where,
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: bookingUserSelect } }
         })
-        return { success: true, data: { documents: bookings, total: bookings.length } }
+        return ok({ documents: bookings, total: bookings.length })
     }
     catch (error: any) {
         console.error('Get bookings error:', error)
-        return { success: false, error: error.message || 'Failed to get bookings' }
+        return fail(error, 'Failed to get bookings')
     }
 }
 
 export async function extendBooking(bookingId: string, extensionMinutes: number): Promise<ActionResponse> {
     try {
+        await assertBookingAccess(bookingId)
+        const safeExtensionMinutes = positiveInt(extensionMinutes, 'Extension minutes')
         const updatedBooking = await prisma.$transaction(async (tx: any) => {
-
             const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
             if (!booking) throw new Error('Booking not found');
 
             const originalStartDate = new Date(`${booking.date}T${booking.startTime}`);
             const currentEndDate = new Date(`${booking.endDate || booking.date}T${booking.endTime}`);
-            const newEndDate = new Date(currentEndDate.getTime() + extensionMinutes * 60000);
+            const newEndDate = new Date(currentEndDate.getTime() + safeExtensionMinutes * 60000);
             const totalDurationMs = newEndDate.getTime() - originalStartDate.getTime();
             const totalDurationMinutes = totalDurationMs / (1000 * 60);
 
@@ -159,16 +169,17 @@ export async function extendBooking(bookingId: string, extensionMinutes: number)
             });
         });
         revalidatePath('/')
-        return { success: true, data: updatedBooking }
+        return ok(updatedBooking)
     }
     catch (error: any) {
         console.error('Extend booking error:', error)
-        return { success: false, error: error.message || 'Failed to extend booking' }
+        return fail(error, 'Failed to extend booking')
     }
 }
 
 export async function expireBooking(bookingId: string): Promise<ActionResponse> {
     try {
+        await assertBookingAccess(bookingId)
         await prisma.$transaction(async (tx: any) => {
             const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
             if (!booking || (booking.status !== 'active' && booking.status !== 'returned')) {
@@ -192,22 +203,22 @@ export async function expireBooking(bookingId: string): Promise<ActionResponse> 
         revalidatePath('/dashboard')
         revalidatePath('/book-court')
 
-
         const [bookingForSport]: any = await prisma.$queryRaw`SELECT "sportName" FROM "Booking" WHERE "id" = ${bookingId}`;
         if (bookingForSport) {
             await notifySocketUpdate(bookingForSport.sportName, 'availability_changed');
         }
 
-        return { success: true, data: null }
+        return ok(null)
     }
     catch (error: any) {
         console.error('Expire booking error:', error)
-        return { success: false, error: error.message || 'Failed to expire booking' }
+        return fail(error, 'Failed to expire booking')
     }
 }
 
 export async function requestReturn(bookingId: string): Promise<ActionResponse> {
     try {
+        await assertBookingAccess(bookingId)
         await prisma.$transaction(async (tx: any) => {
             const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
             if (!booking || booking.status !== 'active') {
@@ -218,7 +229,6 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
             if (!sport) {
                 throw new Error('Associated Sport not found');
             }
-
 
             const courtNo = booking.courtNo;
             let newCourtData = sport.courtData || [];
@@ -250,22 +260,23 @@ export async function requestReturn(bookingId: string): Promise<ActionResponse> 
         revalidatePath('/dashboard')
         revalidatePath('/book-court')
 
-
         const [bookingForSport]: any = await prisma.$queryRaw`SELECT "sportName" FROM "Booking" WHERE "id" = ${bookingId}`;
         if (bookingForSport) {
             await notifySocketUpdate(bookingForSport.sportName, 'availability_changed');
         }
 
-        return { success: true, data: null }
+        return ok(null)
     }
     catch (error: any) {
         console.error('Request return error:', error)
-        return { success: false, error: error.message || 'Failed to request return' }
+        return fail(error, 'Failed to request return')
     }
 }
 
 export async function secureBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
+        await ensureSelfOrAdmin(data.userId)
+        const issues = equipmentIssues(data.equipmentsIssued)
         const result = await prisma.$transaction(async (tx: any) => {
             await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId} FOR UPDATE`;
 
@@ -280,12 +291,11 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
             }
 
             const [sport]: any = await tx.$queryRaw`SELECT * FROM "Sport" WHERE "name" = ${data.sportName} FOR UPDATE`;
-            if (!sport) {
-                throw new Error('Sport not found.')
-            }
+            if (!sport) throw new Error('Sport not found.')
+
             const isCapacityBased = sport.maxCapacity && sport.maxCapacity > 0
             const alreadyBookedPlayers = sport.numPlayers || 0
-            const numPlayers = Number(data.numberOfPlayers) || 0;
+            const numPlayers = positiveInt(data.numberOfPlayers, 'Number of players')
             const courtNo = data.CourtNo
             if (isCapacityBased) {
                 if (alreadyBookedPlayers + numPlayers > (sport.maxCapacity || 0)) {
@@ -323,25 +333,15 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
             }
 
             const booking = await tx.booking.create({
-                data: {
-                    userId: data.userId, sportName: data.sportName,
-                    numberOfPlayers: numPlayers, startTime: data.startTime,
-                    endTime: data.endTime, date: data.date,
-                    qrDetail: data.qrdetail, status: data.status,
-                    endDate: data.enddate, courtNo: data.CourtNo,
-                },
+                data: normalizeBookingCreateData({ ...data, numberOfPlayers: numPlayers }),
             });
 
-            if (data.equipmentsIssued && data.equipmentsIssued.length > 0) {
-                for (const issued of data.equipmentsIssued) {
-                    const [name, countStr] = issued.split(':');
-                    const issuedCount = parseInt(countStr);
-                    const equipment = await tx.equipment.findFirst({ where: { name, sportId: sport.id } });
-                    if (!equipment) throw new Error(`Equipment '${name}' not found for this sport.`);
-                    if (equipment.inUse + issuedCount > equipment.total) throw new Error(`Not enough '${name}' available.`);
-                    await tx.equipment.update({ where: { id: equipment.id }, data: { inUse: { increment: issuedCount } } });
-                    await tx.bookingEquipment.create({ data: { bookingId: booking.id, equipmentId: equipment.id, count: issuedCount } });
-                }
+            for (const issued of issues) {
+                const equipment = await tx.equipment.findFirst({ where: { name: issued.name, sportId: sport.id } });
+                if (!equipment) throw new Error(`Equipment '${issued.name}' not found for this sport.`);
+                if (equipment.inUse + issued.count > equipment.total) throw new Error(`Not enough '${issued.name}' available.`);
+                await tx.equipment.update({ where: { id: equipment.id }, data: { inUse: { increment: issued.count } } });
+                await tx.bookingEquipment.create({ data: { bookingId: booking.id, equipmentId: equipment.id, count: issued.count } });
             }
 
             const qrObj = JSON.parse(data.qrdetail || '{}');
@@ -349,14 +349,34 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
             return await tx.booking.update({ where: { id: booking.id }, data: { qrDetail: JSON.stringify(qrObj) } });
         })
         revalidatePath('/')
-
-
         await notifySocketUpdate(data.sportName, 'availability_changed');
-
-        return { success: true, data: result }
+        return ok(result)
     }
     catch (error: any) {
         console.error('Secure booking error:', error)
-        return { success: false, error: error.message || 'Failed to create booking' }
+        return fail(error, 'Failed to create booking')
     }
 }
+
+async function assertBookingAccess(bookingId: string) {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
+    if (!booking) throw new Error('Booking not found')
+    await ensureSelfOrAdmin(booking.userId)
+    return booking
+}
+
+function normalizeBookingCreateData(data: CreateBookingInput) {
+    return {
+        userId: requiredString(data.userId, 'User ID'),
+        sportName: requiredString(data.sportName, 'Sport name'),
+        numberOfPlayers: positiveInt(data.numberOfPlayers, 'Number of players'),
+        startTime: requiredString(data.startTime, 'Start time', 20),
+        endTime: requiredString(data.endTime, 'End time', 20),
+        date: requiredString(data.date, 'Date', 20),
+        qrDetail: data.qrdetail,
+        status: bookingStatus(data.status),
+        endDate: data.enddate,
+        courtNo: data.CourtNo,
+    }
+}
+

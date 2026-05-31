@@ -2,17 +2,20 @@
 
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
-import { v4 as uuidv4 } from 'uuid'
+import { createHash, randomBytes } from 'crypto'
+import nodemailer from 'nodemailer'
 import { ActionResponse } from '@/interfaces'
+import { fail, ok } from '@/lib/action-response'
+import { getJwtSecret } from '@/lib/auth-config'
+import { getCurrentSessionUser, publicUserSelect, requireUser } from '@/lib/auth-utils'
+import { requireServerEnv } from '@/lib/env'
+import { requiredEmail, requiredString } from '@/lib/validation'
+import { slidingWindowRateLimiter } from '@/lib/rate-limiter'
 
-import nodemailer from 'nodemailer';
-
-if (!process.env.JWT_SECRET) {
-    throw new Error('FATAL: JWT_SECRET environment variable is not set.');
-}
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_RESET_RESPONSE = 'If an account exists with this email, a reset link has been sent.'
 
 export async function createAccount({ email, password, name, phone, rollNumber, sportsExperience, qrCodePath }: {
     email: string;
@@ -24,46 +27,60 @@ export async function createAccount({ email, password, name, phone, rollNumber, 
     qrCodePath?: string | null;
 }): Promise<ActionResponse> {
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email }, })
+        const normalizedEmail = requiredEmail(email)
+        validatePassword(password)
 
-        if (existingUser) {
-            throw new Error('User with this email already exists.')
-        }
+        const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+        if (existingUser) throw new Error('User with this email already exists.')
 
         const hashedPassword = await bcrypt.hash(password, 10)
-
         const user = await prisma.user.create({
             data: {
-                email, password: hashedPassword, name,
-                phone, rollNumber,
-                sportsExperience: sportsExperience || [], qrCodePath,
+                email: normalizedEmail,
+                password: hashedPassword,
+                name: requiredString(name, 'Name'),
+                phone: requiredString(phone, 'Phone', 30),
+                rollNumber: requiredString(rollNumber, 'Roll number', 50),
+                sportsExperience: sportsExperience || [],
+                qrCodePath,
             },
+            select: publicUserSelect,
         })
         await createSession(user)
-        return { success: true, data: user }
+        return ok(user)
     }
     catch (error: any) {
         console.error('Registration error:', error)
-        return { success: false, error: error.message || 'Failed to register' }
+        return fail(error, 'Failed to register')
     }
 }
 
 export async function login({ email, password }: { email: string; password: string }): Promise<ActionResponse> {
     try {
-        const user = await prisma.user.findUnique({ where: { email }, })
-        if (!user) {
-            throw new Error('Invalid email or password.')
-        }
+        const normalizedEmail = requiredEmail(email)
+        const rateLimit = await slidingWindowRateLimiter({
+            identifier: `login:${normalizedEmail}`,
+            limit: 10,
+            windowsMs: 15 * 60 * 1000,
+        })
+        if (!rateLimit.success) throw new Error('Too many login attempts. Please try again later.')
+
+        const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+            select: { ...publicUserSelect, password: true },
+        })
+        if (!user) throw new Error('Invalid email or password.')
+
         const isValid = await bcrypt.compare(password, user.password)
-        if (!isValid) {
-            throw new Error('Invalid email or password.')
-        }
+        if (!isValid) throw new Error('Invalid email or password.')
+
         await createSession(user)
-        return { success: true, data: user }
+        const { password: _password, ...publicUser } = user
+        return ok(publicUser)
     }
     catch (error: any) {
         console.error('Login error:', error)
-        return { success: false, error: error.message || 'Failed to login' }
+        return fail(error, 'Failed to login')
     }
 }
 
@@ -74,112 +91,105 @@ export async function updateUser(userId: string, data: {
     sportsExperience?: string[];
 }): Promise<ActionResponse> {
     try {
-        const { name, phone, rollNumber, sportsExperience } = data;
+        const actor = await getCurrentSessionUser()
+        if (!actor || (actor.id !== userId && actor.role !== 'Admin')) throw new Error('Unauthorized.')
+
         const user = await prisma.user.update({
             where: { id: userId },
             data: {
-                name, phone,
-                rollNumber, sportsExperience
-            }
+                name: data.name !== undefined ? requiredString(data.name, 'Name') : undefined,
+                phone: data.phone !== undefined ? requiredString(data.phone, 'Phone', 30) : undefined,
+                rollNumber: data.rollNumber !== undefined ? requiredString(data.rollNumber, 'Roll number', 50) : undefined,
+                sportsExperience: data.sportsExperience,
+            },
+            select: publicUserSelect,
         });
-        return { success: true, data: user };
+        return ok(user);
     }
     catch (error: any) {
         console.error("Update user error:", error);
-        return { success: false, error: error.message || 'Failed to update user' };
+        return fail(error, 'Failed to update user');
     }
 }
 
 export async function logout(): Promise<ActionResponse> {
     const cookieStore = await cookies()
     cookieStore.delete('session')
-    return { success: true, data: null }
+    return ok(null)
 }
 
 export async function getCurrentUser(): Promise<ActionResponse> {
     try {
-        const cookieStore = await cookies()
-        const session = cookieStore.get('session')
-
-        if (!session) return { success: false, error: 'No session' }
-        const { payload } = await jwtVerify(session.value, SECRET_KEY)
-        if (!payload || !payload.userId) return { success: false, error: 'Invalid session' }
-        const user = await prisma.user.findUnique({
-            where: { id: payload.userId as string },
-            select: {
-                id: true, email: true,
-                name: true, phone: true,
-                rollNumber: true, sportsExperience: true,
-                qrCodePath: true, role: true,
-            }
-        })
-        if (!user) return { success: false, error: 'User not found' }
-        return { success: true, data: user }
+        const user = await getCurrentSessionUser()
+        if (!user) return fail(new Error('No session'))
+        return ok(user)
     }
     catch (error: any) {
-        return { success: false, error: error.message || 'Failed to get current user' }
+        return fail(error, 'Failed to get current user')
     }
 }
 
 export async function getUsers(): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
-        const users = await prisma.user.findMany({
-            select: {
-                id: true, email: true,
-                name: true, phone: true,
-                rollNumber: true, sportsExperience: true,
-                qrCodePath: true, role: true,
-            }
-        });
-        return { success: true, data: { documents: users, total: users.length } };
+        await requireUser()
+        const users = await prisma.user.findMany({ select: publicUserSelect });
+        return ok({ documents: users, total: users.length });
     }
     catch (error: any) {
         console.error("Get users error:", error);
-        return { success: false, error: error.message || 'Failed to get users' };
+        return fail(error, 'Failed to get users');
     }
 }
 
 export async function requestPasswordReset(email: string): Promise<ActionResponse> {
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
-            return { success: true, data: "If an account exists with this email, a reset link has been sent." };
-        }
+        const normalizedEmail = requiredEmail(email)
+        const rateLimit = await slidingWindowRateLimiter({
+            identifier: `password-reset:${normalizedEmail}`,
+            limit: 3,
+            windowsMs: 60 * 60 * 1000,
+        })
+        if (!rateLimit.success) return ok(PASSWORD_RESET_RESPONSE)
 
-        const token = uuidv4();
-        const expiry = new Date(Date.now() + 3600000); 
+        const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (!user) return ok(PASSWORD_RESET_RESPONSE);
+
+        const token = randomBytes(32).toString('hex');
+        const expiry = new Date(Date.now() + 3600000);
 
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                resetToken: token,
+                resetToken: hashResetToken(token),
                 resetTokenExpiry: expiry,
             },
         });
 
-        const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+        const appUrl = requireServerEnv('NEXT_PUBLIC_APP_URL')
+        const resetLink = `${appUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
 
-        await sendResetEmail(email, resetLink);
+        await sendResetEmail(normalizedEmail, resetLink);
 
-        return { success: true, data: "Reset link sent to your email." };
+        return ok(PASSWORD_RESET_RESPONSE);
     } catch (error: any) {
         console.error("Request password reset error:", error);
-        return { success: false, error: error.message || "Failed to process request." };
+        return ok(PASSWORD_RESET_RESPONSE);
     }
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<ActionResponse> {
     try {
+        if (!token || token.length < 32) return fail(new Error('Invalid or expired reset token.'))
+        validatePassword(newPassword)
+
         const user = await prisma.user.findFirst({
             where: {
-                resetToken: token,
+                resetToken: hashResetToken(token),
                 resetTokenExpiry: { gt: new Date() },
             },
         });
 
-        if (!user) {
-            return { success: false, error: "Invalid or expired reset token." };
-        }
+        if (!user) return fail(new Error('Invalid or expired reset token.'));
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -192,33 +202,36 @@ export async function resetPassword(token: string, newPassword: string): Promise
             },
         });
 
-        return { success: true, data: "Password updated successfully." };
+        return ok('Password updated successfully.');
     } catch (error: any) {
         console.error("Reset password error:", error);
-        return { success: false, error: error.message || "Failed to reset password." };
+        return fail(error, 'Failed to reset password');
     }
 }
 
 async function sendResetEmail(email: string, link: string) {
+    const smtpPort = Number(process.env.SMTP_PORT)
+    if (!Number.isInteger(smtpPort) || smtpPort <= 0) throw new Error('SMTP_PORT must be configured.')
+
     const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_PORT === '465',
+        host: requireServerEnv('SMTP_HOST'),
+        port: smtpPort,
+        secure: smtpPort === 465,
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+            user: requireServerEnv('SMTP_USER'),
+            pass: requireServerEnv('SMTP_PASS'),
         },
     });
 
     await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"SportsBook" <noreply@sportsbook.com>',
+        from: requireServerEnv('SMTP_FROM'),
         to: email,
         subject: "Password Reset Request",
         html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <h2 style="color: #3b82f6;">Password Reset</h2>
         <p>Hello,</p>
-        <p>You requested a password reset for your SportsBook account. Click the button below to reset it. This link will expire in 1 hour.</p>
+        <p>You requested a password reset for your SportsBook account. This link will expire in 1 hour.</p>
         <div style="text-align: center; margin: 30px 0;">
         <a href="${link}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
         </div>
@@ -234,12 +247,23 @@ async function sendResetEmail(email: string, link: string) {
 async function createSession(user: any) {
     const token = await new SignJWT({ userId: user.id, email: user.email, role: user.role })
         .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('7d').sign(SECRET_KEY)
+        .setExpirationTime('7d').sign(getJwtSecret())
     const cookieStore = await cookies()
     cookieStore.set('session', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7, 
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 7,
         path: '/',
     })
+}
+
+function hashResetToken(token: string) {
+    return createHash('sha256').update(token).digest('hex')
+}
+
+function validatePassword(password: string) {
+    if (!password || password.length < PASSWORD_MIN_LENGTH) {
+        throw new Error(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
+    }
 }

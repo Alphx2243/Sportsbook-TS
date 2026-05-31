@@ -1,37 +1,42 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
 import { ActionResponse } from '@/interfaces'
+import { fail, ok } from '@/lib/action-response'
+import { requiredString } from '@/lib/validation'
 
 export async function getSports(): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
-        const sports = await prisma.sport.findMany({ 
+        const sports = await prisma.sport.findMany({
             orderBy: { name: 'asc' },
             include: { equipments: true }
         })
-        return { success: true, data: { documents: sports, total: sports.length } }
+        return ok({ documents: sports, total: sports.length })
     }
     catch (error: any) {
         console.error('Get sports error:', error);
-        return { success: false, error: error.message || 'Failed to get sports' }
+        return fail(error, 'Failed to get sports')
     }
 }
 
 export async function getSport(id: string): Promise<ActionResponse> {
     try {
-        const sport = await prisma.sport.findUnique({ where: { id }, })
-        if (!sport) return { success: false, error: 'Sport not found' }
-        return { success: true, data: sport }
+        const sport = await prisma.sport.findUnique({
+            where: { id },
+            include: { equipments: true },
+        })
+        if (!sport) return fail(new Error('Sport not found'))
+        return ok(sport)
     }
     catch (error: any) {
         console.error('Get sport error:', error);
-        return { success: false, error: error.message || 'Failed to get sport' }
+        return fail(error, 'Failed to get sport')
     }
 }
 
 export async function getSportAnalytics(sportName: string): Promise<ActionResponse> {
     try {
+        const safeSportName = requiredString(sportName, 'Sport name')
         const today = new Date();
         const dates = Array.from({ length: 7 }, (_: unknown, i: number) => {
             const d = new Date(today);
@@ -41,7 +46,7 @@ export async function getSportAnalytics(sportName: string): Promise<ActionRespon
 
         const bookings = await prisma.booking.findMany({
             where: {
-                sportName: sportName,
+                sportName: safeSportName,
                 date: { in: dates }
             }
         });
@@ -66,10 +71,11 @@ export async function getSportAnalytics(sportName: string): Promise<ActionRespon
             return { time: slot, Users: Math.round(totalUsersInSlot / 7) };
         });
 
-        return { success: true, data: { weeklyAttendance, peakHours } };
+        return ok({ weeklyAttendance, peakHours });
     }
     catch (error: any) {
         console.error('Get sport analytics error:', error);
-        return { success: false, error: error.message || 'Failed to get analytics' };
+        return fail(error, 'Failed to get analytics');
     }
 }
+

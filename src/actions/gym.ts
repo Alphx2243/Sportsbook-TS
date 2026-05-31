@@ -2,13 +2,16 @@
 
 import prisma from '@/lib/prisma'
 import { ActionResponse } from '@/interfaces'
+import { fail, ok } from '@/lib/action-response'
+import { ensureSelfOrAdmin } from '@/lib/auth-utils'
 
 export async function handleGymScan(userId: string): Promise<ActionResponse> {
     try {
+        await ensureSelfOrAdmin(userId)
         return await prisma.$transaction(async (tx: any) => {
             const [user]: any = await tx.$queryRaw`SELECT id, name FROM "User" WHERE id = ${userId} FOR UPDATE`;
             if (!user) {
-                return { success: false, error: 'User not found' } as ActionResponse;
+                return fail(new Error('User not found')) as ActionResponse;
             }
 
             const activeLog = await tx.gymLog.findFirst({
@@ -26,39 +29,34 @@ export async function handleGymScan(userId: string): Promise<ActionResponse> {
                     data: { exitTime, duration: durationHours }
                 });
 
-                return {
-                    success: true,
-                    data: {
-                        type: 'check-out',
-                        user: user.name,
-                        duration: durationHours,
-                        log: updatedLog
-                    }
-                } as ActionResponse;
+                return ok({
+                    type: 'check-out',
+                    user: user.name,
+                    duration: durationHours,
+                    log: updatedLog
+                }) as ActionResponse;
             } else {
                 const newLog = await tx.gymLog.create({
                     data: { userId: userId, entryTime: new Date() }
                 });
 
-                return {
-                    success: true,
-                    data: {
-                        type: 'check-in',
-                        user: user.name,
-                        log: newLog
-                    }
-                } as ActionResponse;
+                return ok({
+                    type: 'check-in',
+                    user: user.name,
+                    log: newLog
+                }) as ActionResponse;
             }
         });
     }
     catch (error: any) {
         console.error('Gym scan error:', error)
-        return { success: false, error: error.message || 'Failed to process gym scan' }
+        return fail(error, 'Failed to process gym scan')
     }
 }
 
 export async function getGymStats(userId: string): Promise<ActionResponse> {
     try {
+        await ensureSelfOrAdmin(userId)
         const logs = await prisma.gymLog.findMany({
             where: { userId }, orderBy: { entryTime: 'desc' }
         })
@@ -72,9 +70,7 @@ export async function getGymStats(userId: string): Promise<ActionResponse> {
         const weeklyHours = completedLogs
             .filter((log: any) => new Date(log.entryTime) >= weekAgo).reduce((acc: number, log: any) => acc + (log.duration || 0), 0)
 
-        return {
-            success: true,
-            data: {
+        return ok({
                 totalHours: (totalHours || 0).toFixed(1),
                 weeklyHours: (weeklyHours || 0).toFixed(1),
                 sessionsCount: logs.length,
@@ -84,11 +80,10 @@ export async function getGymStats(userId: string): Promise<ActionResponse> {
                     exitTime: log.exitTime ? new Date(log.exitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In Progress',
                     duration: log.duration ? `${log.duration} h` : '--', status: log.exitTime ? 'Completed' : 'Active'
                 }))
-            }
-        }
+            })
     }
     catch (error: any) {
         console.error('Get gym stats error:', error)
-        return { success: false, error: error.message || 'Failed to get gym stats' }
+        return fail(error, 'Failed to get gym stats')
     }
 }
