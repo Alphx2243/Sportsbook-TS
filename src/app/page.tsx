@@ -68,7 +68,7 @@ function DevelopersSection(){
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto">
+      {/* <div className="relative z-10 max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -90,7 +90,7 @@ function DevelopersSection(){
           </motion.p>
         </div>
 
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {devs.map((details, i) => (
             <Card
               key={i}
@@ -104,8 +104,8 @@ function DevelopersSection(){
               </CardContent>
             </Card>
           ))}
-        </div> */}
-      </div>
+        </div>
+      </div> */}
     </section>
   ) 
 }
