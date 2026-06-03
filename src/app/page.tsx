@@ -49,16 +49,16 @@ const features = [
   },
 ]
 
-// const devs = [
-//   {
-//     name : "Kunal Budhiraja",
-//     email : "kunal24313@iiitd.ac.in",
-//   },
-//   {
-//     name : "Kirat Goel",
-//     email : "kirat24303@iiitd.ac.in",
-//   }
-// ]
+const devs = [
+  {
+    name : "Kunal Budhiraja",
+    email : "kunal24313@iiitd.ac.in",
+  },
+  {
+    name : "Kirat Goel",
+    email : "kirat24303@iiitd.ac.in",
+  }
+]
 
 function DevelopersSection(){
   return (
@@ -68,7 +68,7 @@ function DevelopersSection(){
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* <div className="relative z-10 max-w-7xl mx-auto">
+    <div className="relative z-10 max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -105,7 +105,7 @@ function DevelopersSection(){
             </Card>
           ))}
         </div>
-      </div> */}
+      </div>
     </section>
   ) 
 }
