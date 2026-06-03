@@ -106,31 +106,139 @@ async function main() {
         },
     ]
     const users = [
-        {
-            name: 'Kunal Budhiraja',
-            email: 'kunal24313@iiitd.ac.in',
-            password: seedUserPassword,
-            phone: '9810593078',
-            rollNumber: '2024313',
+    {
+        name: 'Kunal Budhiraja',
+        email: 'kunal24313@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9810593078',
+        rollNumber: '2024313',
+    },
+    {
+        name: 'Alphx',
+        email: 'alphx@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '8700740987',
+        rollNumber: '2024333',
+    },
+    {
+        name: 'Admin',
+        email: 'admin@iiitd.ac.in',
+        password: seedAdminPassword,
+        phone: '9810593072',
+        rollNumber: '2024213',
+        role: 'Admin'
+    },
 
-        },
-        {
-            name: 'Alphx',
-            email: 'alphx@iiitd.ac.in',
-            password: seedUserPassword,
-            phone: '8700740987',
-            rollNumber: '2024333',
-        },
-        {
-            name: 'Admin',
-            email: 'admin@iiitd.ac.in',
-            password: seedAdminPassword,
-            phone: '9810593072',
-            rollNumber: '2024213',
-            role: 'Admin'
-        }
-    ]
+    // Additional Users
 
+    {
+        name: 'Aarav Sharma',
+        email: 'aarav.sharma@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111111',
+        rollNumber: '2024301',
+    },
+    {
+        name: 'Priya Gupta',
+        email: 'priya.gupta@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111112',
+        rollNumber: '2024302',
+    },
+    {
+        name: 'Rohan Verma',
+        email: 'rohan.verma@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111113',
+        rollNumber: '2024303',
+    },
+    {
+        name: 'Sneha Kapoor',
+        email: 'sneha.kapoor@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111114',
+        rollNumber: '2024304',
+    },
+    {
+        name: 'Aditya Singh',
+        email: 'aditya.singh@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111115',
+        rollNumber: '2024305',
+    },
+    {
+        name: 'Meera Joshi',
+        email: 'meera.joshi@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111116',
+        rollNumber: '2024306',
+    },
+    {
+        name: 'Arjun Malhotra',
+        email: 'arjun.malhotra@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111117',
+        rollNumber: '2024307',
+    },
+    {
+        name: 'Ananya Rao',
+        email: 'ananya.rao@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111118',
+        rollNumber: '2024308',
+    },
+    {
+        name: 'Dev Khanna',
+        email: 'dev.khanna@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111119',
+        rollNumber: '2024309',
+    },
+    {
+        name: 'Ishita Mehta',
+        email: 'ishita.mehta@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111120',
+        rollNumber: '2024310',
+    },
+    {
+        name: 'Faculty Admin',
+        email: 'faculty.admin@iiitd.ac.in',
+        password: seedAdminPassword,
+        phone: '9811111121',
+        rollNumber: '2024201',
+        role: 'Admin'
+    },
+    {
+        name: 'Library Admin',
+        email: 'library.admin@iiitd.ac.in',
+        password: seedAdminPassword,
+        phone: '9811111122',
+        rollNumber: '2024202',
+        role: 'Admin'
+    },
+    {
+        name: 'Nikhil Bansal',
+        email: 'nikhil.bansal@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111123',
+        rollNumber: '2024311',
+    },
+    {
+        name: 'Tanya Arora',
+        email: 'tanya.arora@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111124',
+        rollNumber: '2024312',
+    },
+    {
+        name: 'Yash Jain',
+        email: 'yash.jain@iiitd.ac.in',
+        password: seedUserPassword,
+        phone: '9811111125',
+        rollNumber: '2024314',
+    }
+];
     for (const sport of sports) {
         await prisma.sport.create({
             data: sport,
