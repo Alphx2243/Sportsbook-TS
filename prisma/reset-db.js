@@ -15,25 +15,22 @@ async function main() {
 
     const seedUserPassword = process.env.RESET_SEED_USER_PASSWORD
     const seedAdminPassword = process.env.RESET_SEED_ADMIN_PASSWORD
+
     if (!seedUserPassword || !seedAdminPassword || seedUserPassword.length < 12 || seedAdminPassword.length < 12) {
         throw new Error('Set RESET_SEED_USER_PASSWORD and RESET_SEED_ADMIN_PASSWORD to strong values before seeding.')
     }
 
     console.log('Starting database reset...')
-    console.log('Cleaning GymLog...')
+
     await prisma.gymLog.deleteMany({})
-    console.log('Cleaning Invite...')
     await prisma.invite.deleteMany({})
-    console.log('Cleaning GuideApplication...')
     await prisma.guideApplication.deleteMany({})
-    console.log('Cleaning Match...')
     await prisma.match.deleteMany({})
-    console.log('Cleaning Booking...')
+    await prisma.bookingEquipment.deleteMany({})
     await prisma.booking.deleteMany({})
-    console.log('Cleaning User...')
     await prisma.user.deleteMany({})
-    console.log('Cleaning Sport...')
     await prisma.sport.deleteMany({})
+
     console.log('Database cleared.')
 
     const sports = [
@@ -239,181 +236,138 @@ async function main() {
         }
     ]
 
-    const seedBookings = [
+    const regularUserEmails = users
+        .filter((user) => user.role !== 'Admin')
+        .map((user) => user.email)
+
+    const sportBookingTemplates = [
         {
-            userEmail: 'kunal24313@iiitd.ac.in',
             sportName: 'Badminton',
-            numberOfPlayers: 4,
-            startTime: '10:56:44',
-            endTime: '11:56:44',
-            date: '2026-06-09',
-            status: 'expired',
-            endDate: '2026-06-09',
-            courtNo: '1',
-            scanned: true,
-            equipments: [
-                { name: 'Racket', count: 4 },
-                { name: 'Shuttle', count: 1 }
-            ]
-        },
-        {
-            userEmail: 'alphx@iiitd.ac.in',
-            sportName: 'Badminton',
-            numberOfPlayers: 2,
-            startTime: '12:00:00',
-            endTime: '13:00:00',
-            date: '2026-06-09',
-            status: 'confirmed',
-            endDate: '2026-06-09',
-            courtNo: '2',
-            scanned: false,
+            courtNos: ['1', '2', '3'],
+            playerCounts: [2, 4],
             equipments: [
                 { name: 'Racket', count: 2 },
                 { name: 'Shuttle', count: 1 }
             ]
         },
         {
-            userEmail: 'aarav.sharma@iiitd.ac.in',
             sportName: 'Squash',
-            numberOfPlayers: 2,
-            startTime: '14:00:00',
-            endTime: '15:00:00',
-            date: '2026-06-10',
-            status: 'confirmed',
-            endDate: '2026-06-10',
-            courtNo: '1',
-            scanned: false,
+            courtNos: ['1', '2'],
+            playerCounts: [2],
             equipments: [
                 { name: 'Racket', count: 2 },
                 { name: 'Ball', count: 1 }
             ]
         },
         {
-            userEmail: 'priya.gupta@iiitd.ac.in',
             sportName: 'Table Tennis',
-            numberOfPlayers: 2,
-            startTime: '16:00:00',
-            endTime: '17:00:00',
-            date: '2026-06-10',
-            status: 'confirmed',
-            endDate: '2026-06-10',
-            courtNo: '1',
-            scanned: false,
+            courtNos: ['1', '2', '3', '4'],
+            playerCounts: [2, 4],
             equipments: [
                 { name: 'Racket', count: 2 },
                 { name: 'Ball', count: 2 }
             ]
         },
         {
-            userEmail: 'rohan.verma@iiitd.ac.in',
             sportName: 'Tennis',
-            numberOfPlayers: 4,
-            startTime: '17:30:00',
-            endTime: '18:30:00',
-            date: '2026-06-10',
-            status: 'confirmed',
-            endDate: '2026-06-10',
-            courtNo: '2',
-            scanned: false,
+            courtNos: ['1', '2'],
+            playerCounts: [2, 4],
             equipments: [
-                { name: 'Racket', count: 4 },
-                { name: 'Ball', count: 3 }
+                { name: 'Racket', count: 2 },
+                { name: 'Ball', count: 2 }
             ]
         },
         {
-            userEmail: 'sneha.kapoor@iiitd.ac.in',
             sportName: 'Swimming',
-            numberOfPlayers: 1,
-            startTime: '07:00:00',
-            endTime: '08:00:00',
-            date: '2026-06-11',
-            status: 'confirmed',
-            endDate: '2026-06-11',
-            courtNo: 'RPool',
-            scanned: false,
+            courtNos: ['RPool'],
+            playerCounts: [1, 2, 3],
             equipments: []
         },
         {
-            userEmail: 'aditya.singh@iiitd.ac.in',
             sportName: 'Gym',
-            numberOfPlayers: 1,
-            startTime: '18:00:00',
-            endTime: '19:00:00',
-            date: '2026-06-11',
-            status: 'confirmed',
-            endDate: '2026-06-11',
-            courtNo: 'Main Gym',
-            scanned: false,
+            courtNos: ['Main Gym'],
+            playerCounts: [1],
             equipments: []
         },
-        {
-            userEmail: 'meera.joshi@iiitd.ac.in',
-            sportName: 'Badminton',
-            numberOfPlayers: 4,
-            startTime: '09:00:00',
-            endTime: '10:00:00',
-            date: '2026-06-12',
-            status: 'cancelled',
-            endDate: '2026-06-12',
-            courtNo: '3',
-            scanned: false,
-            equipments: [
-                { name: 'Racket', count: 4 },
-                { name: 'Shuttle', count: 2 }
-            ]
-        },
-        {
-            userEmail: 'arjun.malhotra@iiitd.ac.in',
-            sportName: 'Table Tennis',
-            numberOfPlayers: 4,
-            startTime: '19:00:00',
-            endTime: '20:00:00',
-            date: '2026-06-12',
-            status: 'confirmed',
-            endDate: '2026-06-12',
-            courtNo: '3',
-            scanned: false,
-            equipments: [
-                { name: 'Racket', count: 4 },
-                { name: 'Ball', count: 2 }
-            ]
-        },
-        {
-            userEmail: 'ananya.rao@iiitd.ac.in',
-            sportName: 'Tennis',
-            numberOfPlayers: 2,
-            startTime: '06:30:00',
-            endTime: '07:30:00',
-            date: '2026-06-13',
-            status: 'confirmed',
-            endDate: '2026-06-13',
-            courtNo: '1',
-            scanned: false,
-            equipments: [
-                { name: 'Racket', count: 2 },
-                { name: 'Ball', count: 2 }
-            ]
-        }
     ]
+
+    function makePastCompletedBookings() {
+        const bookings = []
+
+        const startSlots = [
+            ['06:00:00', '07:00:00'],
+            ['07:30:00', '08:30:00'],
+            ['09:00:00', '10:00:00'],
+            ['10:30:00', '11:30:00'],
+            ['12:00:00', '13:00:00'],
+            ['14:00:00', '15:00:00'],
+            ['16:00:00', '17:00:00'],
+            ['18:00:00', '19:00:00'],
+            ['20:00:00', '21:00:00'],
+        ]
+
+        let bookingIndex = 0
+
+        for (const template of sportBookingTemplates) {
+            // 9 bookings per sport * 6 sports = 54 completed past bookings.
+            for (let i = 0; i < 9; i++) {
+                const day = String(1 + bookingIndex).padStart(2, '0')
+                const [startTime, endTime] = startSlots[i % startSlots.length]
+                const numberOfPlayers = template.playerCounts[i % template.playerCounts.length]
+                const courtNo = template.courtNos[i % template.courtNos.length]
+
+                bookings.push({
+                    userEmail: regularUserEmails[bookingIndex % regularUserEmails.length],
+                    sportName: template.sportName,
+                    numberOfPlayers,
+                    startTime,
+                    endTime,
+                    date: `2026-05-${day}`,
+                    status: 'completed',
+                    endDate: `2026-05-${day}`,
+                    courtNo,
+                    scanned: true,
+                    equipments: template.equipments.map((equipment) => ({
+                        name: equipment.name,
+                        count: Math.min(equipment.count, numberOfPlayers)
+                    }))
+                })
+
+                bookingIndex++
+            }
+        }
+
+        return bookings
+    }
+
+    const seedBookings = makePastCompletedBookings()
 
     for (const sport of sports) {
         await prisma.sport.create({
             data: sport,
         })
+
         console.log(`Created sport: ${sport.name}`)
     }
 
     for (const user of users) {
         const password = await bcrypt.hash(user.password, 10)
+
         await prisma.user.create({
-            data: { ...user, password },
+            data: {
+                ...user,
+                password,
+            },
         })
+
         console.log(`Created user: ${user.name}`)
     }
 
     for (const booking of seedBookings) {
         const user = await prisma.user.findUnique({
-            where: { email: booking.userEmail }
+            where: {
+                email: booking.userEmail
+            }
         })
 
         if (!user) {
@@ -463,7 +417,9 @@ async function main() {
         })
 
         await prisma.booking.update({
-            where: { id: createdBooking.id },
+            where: {
+                id: createdBooking.id
+            },
             data: {
                 qrDetail: JSON.stringify({
                     name: user.name,
@@ -471,6 +427,12 @@ async function main() {
                     rollNumber: user.rollNumber,
                     sportName: booking.sportName,
                     playerCount: booking.numberOfPlayers,
+                    startTime: booking.startTime,
+                    endTime: booking.endTime,
+                    date: booking.date,
+                    courtNo: booking.courtNo,
+                    status: booking.status,
+                    scanned: booking.scanned,
                     equipmentCounts: booking.equipments.reduce((acc, equipment) => {
                         acc[equipment.name] = equipment.count
                         return acc
@@ -480,9 +442,10 @@ async function main() {
             }
         })
 
-        console.log(`Created booking: ${user.email} - ${booking.sportName} ${booking.date} ${booking.startTime}`)
+        console.log(`Created completed booking: ${user.email} - ${booking.sportName} ${booking.date} ${booking.startTime}`)
     }
 
+    console.log(`Seeded ${seedBookings.length} completed past bookings across all sports.`)
     console.log('Database reset complete!')
 }
 
