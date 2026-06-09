@@ -16,19 +16,39 @@ async function main() {
     const seedUserPassword = process.env.RESET_SEED_USER_PASSWORD
     const seedAdminPassword = process.env.RESET_SEED_ADMIN_PASSWORD
 
-    if (!seedUserPassword || !seedAdminPassword || seedUserPassword.length < 12 || seedAdminPassword.length < 12) {
+    if (
+        !seedUserPassword ||
+        !seedAdminPassword ||
+        seedUserPassword.length < 12 ||
+        seedAdminPassword.length < 12
+    ) {
         throw new Error('Set RESET_SEED_USER_PASSWORD and RESET_SEED_ADMIN_PASSWORD to strong values before seeding.')
     }
 
     console.log('Starting database reset...')
 
+    console.log('Cleaning GymLog...')
     await prisma.gymLog.deleteMany({})
+
+    console.log('Cleaning Invite...')
     await prisma.invite.deleteMany({})
+
+    console.log('Cleaning GuideApplication...')
     await prisma.guideApplication.deleteMany({})
+
+    console.log('Cleaning Match...')
     await prisma.match.deleteMany({})
+
+    console.log('Cleaning BookingEquipment...')
     await prisma.bookingEquipment.deleteMany({})
+
+    console.log('Cleaning Booking...')
     await prisma.booking.deleteMany({})
+
+    console.log('Cleaning User...')
     await prisma.user.deleteMany({})
+
+    console.log('Cleaning Sport...')
     await prisma.sport.deleteMany({})
 
     console.log('Database cleared.')
@@ -43,9 +63,9 @@ async function main() {
             equipments: {
                 create: [
                     { name: 'Racket', total: 20 },
-                    { name: 'Shuttle', total: 50 }
-                ]
-            }
+                    { name: 'Shuttle', total: 50 },
+                ],
+            },
         },
         {
             name: 'Squash',
@@ -56,9 +76,9 @@ async function main() {
             equipments: {
                 create: [
                     { name: 'Racket', total: 10 },
-                    { name: 'Ball', total: 20 }
-                ]
-            }
+                    { name: 'Ball', total: 20 },
+                ],
+            },
         },
         {
             name: 'Table Tennis',
@@ -69,9 +89,9 @@ async function main() {
             equipments: {
                 create: [
                     { name: 'Racket', total: 20 },
-                    { name: 'Ball', total: 50 }
-                ]
-            }
+                    { name: 'Ball', total: 50 },
+                ],
+            },
         },
         {
             name: 'Tennis',
@@ -82,9 +102,9 @@ async function main() {
             equipments: {
                 create: [
                     { name: 'Racket', total: 15 },
-                    { name: 'Ball', total: 40 }
-                ]
-            }
+                    { name: 'Ball', total: 40 },
+                ],
+            },
         },
         {
             name: 'Swimming',
@@ -125,7 +145,7 @@ async function main() {
             password: seedAdminPassword,
             phone: '9810593072',
             rollNumber: '2024213',
-            role: 'Admin'
+            role: 'Admin',
         },
         {
             name: 'Aarav Sharma',
@@ -203,7 +223,7 @@ async function main() {
             password: seedAdminPassword,
             phone: '9811111121',
             rollNumber: '2024201',
-            role: 'Admin'
+            role: 'Admin',
         },
         {
             name: 'Library Admin',
@@ -211,7 +231,7 @@ async function main() {
             password: seedAdminPassword,
             phone: '9811111122',
             rollNumber: '2024202',
-            role: 'Admin'
+            role: 'Admin',
         },
         {
             name: 'Nikhil Bansal',
@@ -233,7 +253,7 @@ async function main() {
             password: seedUserPassword,
             phone: '9811111125',
             rollNumber: '2024314',
-        }
+        },
     ]
 
     const regularUserEmails = users
@@ -247,8 +267,8 @@ async function main() {
             playerCounts: [2, 4],
             equipments: [
                 { name: 'Racket', count: 2 },
-                { name: 'Shuttle', count: 1 }
-            ]
+                { name: 'Shuttle', count: 1 },
+            ],
         },
         {
             sportName: 'Squash',
@@ -256,8 +276,8 @@ async function main() {
             playerCounts: [2],
             equipments: [
                 { name: 'Racket', count: 2 },
-                { name: 'Ball', count: 1 }
-            ]
+                { name: 'Ball', count: 1 },
+            ],
         },
         {
             sportName: 'Table Tennis',
@@ -265,8 +285,8 @@ async function main() {
             playerCounts: [2, 4],
             equipments: [
                 { name: 'Racket', count: 2 },
-                { name: 'Ball', count: 2 }
-            ]
+                { name: 'Ball', count: 2 },
+            ],
         },
         {
             sportName: 'Tennis',
@@ -274,27 +294,38 @@ async function main() {
             playerCounts: [2, 4],
             equipments: [
                 { name: 'Racket', count: 2 },
-                { name: 'Ball', count: 2 }
-            ]
+                { name: 'Ball', count: 2 },
+            ],
         },
         {
             sportName: 'Swimming',
             courtNos: ['RPool'],
             playerCounts: [1, 2, 3],
-            equipments: []
+            equipments: [],
         },
         {
             sportName: 'Gym',
             courtNos: ['Main Gym'],
             playerCounts: [1],
-            equipments: []
+            equipments: [],
         },
     ]
 
     function makePastCompletedBookings() {
         const bookings = []
 
-        const startSlots = [
+        // These dates are inside the RTO analytics last-7-days window
+        // and are still in the past relative to 2026-06-09.
+        const pastDates = [
+            '2026-06-03',
+            '2026-06-04',
+            '2026-06-05',
+            '2026-06-06',
+            '2026-06-07',
+            '2026-06-08',
+        ]
+
+        const timeSlots = [
             ['06:00:00', '07:00:00'],
             ['07:30:00', '08:30:00'],
             ['09:00:00', '10:00:00'],
@@ -309,10 +340,10 @@ async function main() {
         let bookingIndex = 0
 
         for (const template of sportBookingTemplates) {
-            // 9 bookings per sport * 6 sports = 54 completed past bookings.
+            // 9 bookings per sport * 6 sports = 54 completed bookings.
             for (let i = 0; i < 9; i++) {
-                const day = String(1 + bookingIndex).padStart(2, '0')
-                const [startTime, endTime] = startSlots[i % startSlots.length]
+                const bookingDate = pastDates[bookingIndex % pastDates.length]
+                const [startTime, endTime] = timeSlots[i % timeSlots.length]
                 const numberOfPlayers = template.playerCounts[i % template.playerCounts.length]
                 const courtNo = template.courtNos[i % template.courtNos.length]
 
@@ -322,15 +353,15 @@ async function main() {
                     numberOfPlayers,
                     startTime,
                     endTime,
-                    date: `2026-05-${day}`,
+                    date: bookingDate,
+                    endDate: bookingDate,
                     status: 'completed',
-                    endDate: `2026-05-${day}`,
                     courtNo,
                     scanned: true,
                     equipments: template.equipments.map((equipment) => ({
                         name: equipment.name,
-                        count: Math.min(equipment.count, numberOfPlayers)
-                    }))
+                        count: Math.min(equipment.count, numberOfPlayers),
+                    })),
                 })
 
                 bookingIndex++
@@ -366,8 +397,8 @@ async function main() {
     for (const booking of seedBookings) {
         const user = await prisma.user.findUnique({
             where: {
-                email: booking.userEmail
-            }
+                email: booking.userEmail,
+            },
         })
 
         if (!user) {
@@ -382,10 +413,10 @@ async function main() {
                     name: equipment.name,
                     sport: {
                         is: {
-                            name: booking.sportName
-                        }
-                    }
-                }
+                            name: booking.sportName,
+                        },
+                    },
+                },
             })
 
             if (!equipmentRecord) {
@@ -394,7 +425,7 @@ async function main() {
 
             bookingEquipments.push({
                 equipmentId: equipmentRecord.id,
-                count: equipment.count
+                count: equipment.count,
             })
         }
 
@@ -406,19 +437,20 @@ async function main() {
                 startTime: booking.startTime,
                 endTime: booking.endTime,
                 date: booking.date,
+                qrDetail: null,
                 status: booking.status,
                 endDate: booking.endDate,
                 courtNo: booking.courtNo,
                 scanned: booking.scanned,
                 equipments: {
-                    create: bookingEquipments
-                }
-            }
+                    create: bookingEquipments,
+                },
+            },
         })
 
         await prisma.booking.update({
             where: {
-                id: createdBooking.id
+                id: createdBooking.id,
             },
             data: {
                 qrDetail: JSON.stringify({
@@ -430,6 +462,7 @@ async function main() {
                     startTime: booking.startTime,
                     endTime: booking.endTime,
                     date: booking.date,
+                    endDate: booking.endDate,
                     courtNo: booking.courtNo,
                     status: booking.status,
                     scanned: booking.scanned,
@@ -437,12 +470,14 @@ async function main() {
                         acc[equipment.name] = equipment.count
                         return acc
                     }, {}),
-                    bookingId: createdBooking.id
-                })
-            }
+                    bookingId: createdBooking.id,
+                }),
+            },
         })
 
-        console.log(`Created completed booking: ${user.email} - ${booking.sportName} ${booking.date} ${booking.startTime}`)
+        console.log(
+            `Created completed booking: ${user.email} - ${booking.sportName} ${booking.date} ${booking.startTime}`
+        )
     }
 
     console.log(`Seeded ${seedBookings.length} completed past bookings across all sports.`)
