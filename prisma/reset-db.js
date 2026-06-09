@@ -35,6 +35,7 @@ async function main() {
     console.log('Cleaning Sport...')
     await prisma.sport.deleteMany({})
     console.log('Database cleared.')
+
     const sports = [
         {
             name: 'Badminton',
@@ -105,152 +106,381 @@ async function main() {
             courtData: ['Main Gym:0'],
         },
     ]
+
     const users = [
-    {
-        name: 'Kunal Budhiraja',
-        email: 'kunal24313@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9810593078',
-        rollNumber: '2024313',
-    },
-    {
-        name: 'Alphx',
-        email: 'alphx@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '8700740987',
-        rollNumber: '2024333',
-    },
-    {
-        name: 'Admin',
-        email: 'admin@iiitd.ac.in',
-        password: seedAdminPassword,
-        phone: '9810593072',
-        rollNumber: '2024213',
-        role: 'Admin'
-    },
+        {
+            name: 'Kunal Budhiraja',
+            email: 'kunal24313@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9810593078',
+            rollNumber: '2024313',
+        },
+        {
+            name: 'Alphx',
+            email: 'alphx@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '8700740987',
+            rollNumber: '2024333',
+        },
+        {
+            name: 'Admin',
+            email: 'admin@iiitd.ac.in',
+            password: seedAdminPassword,
+            phone: '9810593072',
+            rollNumber: '2024213',
+            role: 'Admin'
+        },
+        {
+            name: 'Aarav Sharma',
+            email: 'aarav.sharma@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111111',
+            rollNumber: '2024301',
+        },
+        {
+            name: 'Priya Gupta',
+            email: 'priya.gupta@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111112',
+            rollNumber: '2024302',
+        },
+        {
+            name: 'Rohan Verma',
+            email: 'rohan.verma@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111113',
+            rollNumber: '2024303',
+        },
+        {
+            name: 'Sneha Kapoor',
+            email: 'sneha.kapoor@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111114',
+            rollNumber: '2024304',
+        },
+        {
+            name: 'Aditya Singh',
+            email: 'aditya.singh@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111115',
+            rollNumber: '2024305',
+        },
+        {
+            name: 'Meera Joshi',
+            email: 'meera.joshi@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111116',
+            rollNumber: '2024306',
+        },
+        {
+            name: 'Arjun Malhotra',
+            email: 'arjun.malhotra@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111117',
+            rollNumber: '2024307',
+        },
+        {
+            name: 'Ananya Rao',
+            email: 'ananya.rao@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111118',
+            rollNumber: '2024308',
+        },
+        {
+            name: 'Dev Khanna',
+            email: 'dev.khanna@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111119',
+            rollNumber: '2024309',
+        },
+        {
+            name: 'Ishita Mehta',
+            email: 'ishita.mehta@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111120',
+            rollNumber: '2024310',
+        },
+        {
+            name: 'Faculty Admin',
+            email: 'faculty.admin@iiitd.ac.in',
+            password: seedAdminPassword,
+            phone: '9811111121',
+            rollNumber: '2024201',
+            role: 'Admin'
+        },
+        {
+            name: 'Library Admin',
+            email: 'library.admin@iiitd.ac.in',
+            password: seedAdminPassword,
+            phone: '9811111122',
+            rollNumber: '2024202',
+            role: 'Admin'
+        },
+        {
+            name: 'Nikhil Bansal',
+            email: 'nikhil.bansal@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111123',
+            rollNumber: '2024311',
+        },
+        {
+            name: 'Tanya Arora',
+            email: 'tanya.arora@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111124',
+            rollNumber: '2024312',
+        },
+        {
+            name: 'Yash Jain',
+            email: 'yash.jain@iiitd.ac.in',
+            password: seedUserPassword,
+            phone: '9811111125',
+            rollNumber: '2024314',
+        }
+    ]
 
-    // Additional Users
+    const seedBookings = [
+        {
+            userEmail: 'kunal24313@iiitd.ac.in',
+            sportName: 'Badminton',
+            numberOfPlayers: 4,
+            startTime: '10:56:44',
+            endTime: '11:56:44',
+            date: '2026-06-09',
+            status: 'expired',
+            endDate: '2026-06-09',
+            courtNo: '1',
+            scanned: true,
+            equipments: [
+                { name: 'Racket', count: 4 },
+                { name: 'Shuttle', count: 1 }
+            ]
+        },
+        {
+            userEmail: 'alphx@iiitd.ac.in',
+            sportName: 'Badminton',
+            numberOfPlayers: 2,
+            startTime: '12:00:00',
+            endTime: '13:00:00',
+            date: '2026-06-09',
+            status: 'confirmed',
+            endDate: '2026-06-09',
+            courtNo: '2',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 2 },
+                { name: 'Shuttle', count: 1 }
+            ]
+        },
+        {
+            userEmail: 'aarav.sharma@iiitd.ac.in',
+            sportName: 'Squash',
+            numberOfPlayers: 2,
+            startTime: '14:00:00',
+            endTime: '15:00:00',
+            date: '2026-06-10',
+            status: 'confirmed',
+            endDate: '2026-06-10',
+            courtNo: '1',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 2 },
+                { name: 'Ball', count: 1 }
+            ]
+        },
+        {
+            userEmail: 'priya.gupta@iiitd.ac.in',
+            sportName: 'Table Tennis',
+            numberOfPlayers: 2,
+            startTime: '16:00:00',
+            endTime: '17:00:00',
+            date: '2026-06-10',
+            status: 'confirmed',
+            endDate: '2026-06-10',
+            courtNo: '1',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 2 },
+                { name: 'Ball', count: 2 }
+            ]
+        },
+        {
+            userEmail: 'rohan.verma@iiitd.ac.in',
+            sportName: 'Tennis',
+            numberOfPlayers: 4,
+            startTime: '17:30:00',
+            endTime: '18:30:00',
+            date: '2026-06-10',
+            status: 'confirmed',
+            endDate: '2026-06-10',
+            courtNo: '2',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 4 },
+                { name: 'Ball', count: 3 }
+            ]
+        },
+        {
+            userEmail: 'sneha.kapoor@iiitd.ac.in',
+            sportName: 'Swimming',
+            numberOfPlayers: 1,
+            startTime: '07:00:00',
+            endTime: '08:00:00',
+            date: '2026-06-11',
+            status: 'confirmed',
+            endDate: '2026-06-11',
+            courtNo: 'RPool',
+            scanned: false,
+            equipments: []
+        },
+        {
+            userEmail: 'aditya.singh@iiitd.ac.in',
+            sportName: 'Gym',
+            numberOfPlayers: 1,
+            startTime: '18:00:00',
+            endTime: '19:00:00',
+            date: '2026-06-11',
+            status: 'confirmed',
+            endDate: '2026-06-11',
+            courtNo: 'Main Gym',
+            scanned: false,
+            equipments: []
+        },
+        {
+            userEmail: 'meera.joshi@iiitd.ac.in',
+            sportName: 'Badminton',
+            numberOfPlayers: 4,
+            startTime: '09:00:00',
+            endTime: '10:00:00',
+            date: '2026-06-12',
+            status: 'cancelled',
+            endDate: '2026-06-12',
+            courtNo: '3',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 4 },
+                { name: 'Shuttle', count: 2 }
+            ]
+        },
+        {
+            userEmail: 'arjun.malhotra@iiitd.ac.in',
+            sportName: 'Table Tennis',
+            numberOfPlayers: 4,
+            startTime: '19:00:00',
+            endTime: '20:00:00',
+            date: '2026-06-12',
+            status: 'confirmed',
+            endDate: '2026-06-12',
+            courtNo: '3',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 4 },
+                { name: 'Ball', count: 2 }
+            ]
+        },
+        {
+            userEmail: 'ananya.rao@iiitd.ac.in',
+            sportName: 'Tennis',
+            numberOfPlayers: 2,
+            startTime: '06:30:00',
+            endTime: '07:30:00',
+            date: '2026-06-13',
+            status: 'confirmed',
+            endDate: '2026-06-13',
+            courtNo: '1',
+            scanned: false,
+            equipments: [
+                { name: 'Racket', count: 2 },
+                { name: 'Ball', count: 2 }
+            ]
+        }
+    ]
 
-    {
-        name: 'Aarav Sharma',
-        email: 'aarav.sharma@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111111',
-        rollNumber: '2024301',
-    },
-    {
-        name: 'Priya Gupta',
-        email: 'priya.gupta@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111112',
-        rollNumber: '2024302',
-    },
-    {
-        name: 'Rohan Verma',
-        email: 'rohan.verma@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111113',
-        rollNumber: '2024303',
-    },
-    {
-        name: 'Sneha Kapoor',
-        email: 'sneha.kapoor@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111114',
-        rollNumber: '2024304',
-    },
-    {
-        name: 'Aditya Singh',
-        email: 'aditya.singh@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111115',
-        rollNumber: '2024305',
-    },
-    {
-        name: 'Meera Joshi',
-        email: 'meera.joshi@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111116',
-        rollNumber: '2024306',
-    },
-    {
-        name: 'Arjun Malhotra',
-        email: 'arjun.malhotra@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111117',
-        rollNumber: '2024307',
-    },
-    {
-        name: 'Ananya Rao',
-        email: 'ananya.rao@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111118',
-        rollNumber: '2024308',
-    },
-    {
-        name: 'Dev Khanna',
-        email: 'dev.khanna@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111119',
-        rollNumber: '2024309',
-    },
-    {
-        name: 'Ishita Mehta',
-        email: 'ishita.mehta@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111120',
-        rollNumber: '2024310',
-    },
-    {
-        name: 'Faculty Admin',
-        email: 'faculty.admin@iiitd.ac.in',
-        password: seedAdminPassword,
-        phone: '9811111121',
-        rollNumber: '2024201',
-        role: 'Admin'
-    },
-    {
-        name: 'Library Admin',
-        email: 'library.admin@iiitd.ac.in',
-        password: seedAdminPassword,
-        phone: '9811111122',
-        rollNumber: '2024202',
-        role: 'Admin'
-    },
-    {
-        name: 'Nikhil Bansal',
-        email: 'nikhil.bansal@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111123',
-        rollNumber: '2024311',
-    },
-    {
-        name: 'Tanya Arora',
-        email: 'tanya.arora@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111124',
-        rollNumber: '2024312',
-    },
-    {
-        name: 'Yash Jain',
-        email: 'yash.jain@iiitd.ac.in',
-        password: seedUserPassword,
-        phone: '9811111125',
-        rollNumber: '2024314',
-    }
-];
     for (const sport of sports) {
         await prisma.sport.create({
             data: sport,
         })
         console.log(`Created sport: ${sport.name}`)
     }
+
     for (const user of users) {
-        const password = await bcrypt.hash(user.password, 10);
+        const password = await bcrypt.hash(user.password, 10)
         await prisma.user.create({
             data: { ...user, password },
         })
         console.log(`Created user: ${user.name}`)
+    }
+
+    for (const booking of seedBookings) {
+        const user = await prisma.user.findUnique({
+            where: { email: booking.userEmail }
+        })
+
+        if (!user) {
+            throw new Error(`Seed booking user not found: ${booking.userEmail}`)
+        }
+
+        const bookingEquipments = []
+
+        for (const equipment of booking.equipments) {
+            const equipmentRecord = await prisma.equipment.findFirst({
+                where: {
+                    name: equipment.name,
+                    sport: {
+                        is: {
+                            name: booking.sportName
+                        }
+                    }
+                }
+            })
+
+            if (!equipmentRecord) {
+                throw new Error(`Seed equipment not found: ${booking.sportName} - ${equipment.name}`)
+            }
+
+            bookingEquipments.push({
+                equipmentId: equipmentRecord.id,
+                count: equipment.count
+            })
+        }
+
+        const createdBooking = await prisma.booking.create({
+            data: {
+                userId: user.id,
+                sportName: booking.sportName,
+                numberOfPlayers: booking.numberOfPlayers,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                date: booking.date,
+                status: booking.status,
+                endDate: booking.endDate,
+                courtNo: booking.courtNo,
+                scanned: booking.scanned,
+                equipments: {
+                    create: bookingEquipments
+                }
+            }
+        })
+
+        await prisma.booking.update({
+            where: { id: createdBooking.id },
+            data: {
+                qrDetail: JSON.stringify({
+                    name: user.name,
+                    email: user.email,
+                    rollNumber: user.rollNumber,
+                    sportName: booking.sportName,
+                    playerCount: booking.numberOfPlayers,
+                    equipmentCounts: booking.equipments.reduce((acc, equipment) => {
+                        acc[equipment.name] = equipment.count
+                        return acc
+                    }, {}),
+                    bookingId: createdBooking.id
+                })
+            }
+        })
+
+        console.log(`Created booking: ${user.email} - ${booking.sportName} ${booking.date} ${booking.startTime}`)
     }
 
     console.log('Database reset complete!')
