@@ -253,6 +253,7 @@ export default function Dashboard() {
                                                         {activeBooking.sportName}
                                                         <span className="ml-3 text-primary/50">Court {activeBooking.courtNo}</span>
                                                     </h3>
+                                                    <p>Booking ID: {activeBooking.id}</p>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
