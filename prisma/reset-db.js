@@ -126,6 +126,22 @@ async function main() {
 
     const users = [
         {
+            name: 'Guard',
+            email: 'guard@iiitd.ac.in',
+            password: seedAdminPassword,
+            phone: '9810593073',
+            rollNumber: '2024214',
+            role: 'guard'
+        },
+        {
+            name: 'Facility Manager',
+            email: 'facility.manager@iiitd.ac.in',
+            password: seedAdminPassword,
+            phone: '9810593074',
+            rollNumber: '2024215',
+            role: 'facility_manager'
+        },
+        {
             name: 'Kunal Budhiraja',
             email: 'kunal24313@iiitd.ac.in',
             password: seedUserPassword,
