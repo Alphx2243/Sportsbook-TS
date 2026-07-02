@@ -46,7 +46,7 @@ export async function createAccount({ email, password, name, phone, rollNumber, 
             },
             select: publicUserSelect,
         })
-        await createSession(user)
+        // await createSession(user)
         return ok(user)
     }
     catch (error: any) {

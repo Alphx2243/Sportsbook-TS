@@ -57,10 +57,11 @@ export async function handleGymScan(userId: string): Promise<ActionResponse> {
 export async function getGymStats(userId: string): Promise<ActionResponse> {
     try {
         await ensureSelfOrAdmin(userId)
+        // console.log("Fetching gym stats for userId:", userId)  
         const logs = await prisma.gymLog.findMany({
             where: { userId }, orderBy: { entryTime: 'desc' }
         })
-
+        // console.log("Fetched logs:", logs)  
         const completedLogs = logs.filter((log: any) => log.exitTime !== null)
 
         const totalHours = completedLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0)
@@ -85,5 +86,21 @@ export async function getGymStats(userId: string): Promise<ActionResponse> {
     catch (error: any) {
         console.error('Get gym stats error:', error)
         return fail(error, 'Failed to get gym stats')
+    }
+}
+
+export async function getGymBookings(userId: string): Promise<ActionResponse> {
+    try{
+        await ensureSelfOrAdmin(userId)
+        // console.log("Fetching gym stats for userId:", userId)  
+        const logs = await prisma.gymLog.findMany({
+            where: { userId }, orderBy: { entryTime: 'desc' }
+        });
+        console.log("Fetched gym bookings logs:", logs);
+        return ok({ documents: logs });
+    }
+    catch(error : any){
+        console.log('Get gym bookings error: ', error);
+        return fail(error, 'Failed to get gym bookings')
     }
 }
