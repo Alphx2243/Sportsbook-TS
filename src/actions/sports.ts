@@ -5,13 +5,19 @@ import { ActionResponse } from '@/interfaces'
 import { fail, ok } from '@/lib/action-response'
 import { requiredString } from '@/lib/validation'
 
+function withEquipments(sport: any) {
+    const { Equipment, ...rest } = sport
+    return { ...rest, equipments: Equipment || [] }
+}
+
 export async function getSports(): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
         const sports = await prisma.sport.findMany({
             orderBy: { name: 'asc' },
-            include: { equipments: true }
+            include: { Equipment: true }
         })
-        return ok({ documents: sports, total: sports.length })
+        const documents = sports.map(withEquipments)
+        return ok({ documents, total: documents.length })
     }
     catch (error: any) {
         console.error('Get sports error:', error);
@@ -23,10 +29,10 @@ export async function getSport(id: string): Promise<ActionResponse> {
     try {
         const sport = await prisma.sport.findUnique({
             where: { id },
-            include: { equipments: true },
+            include: { Equipment: true },
         })
         if (!sport) return fail(new Error('Sport not found'))
-        return ok(sport)
+        return ok(withEquipments(sport))
     }
     catch (error: any) {
         console.error('Get sport error:', error);
