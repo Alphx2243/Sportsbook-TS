@@ -37,8 +37,16 @@ export default function AgniCodersBooking() {
       const data = raw;
       
       setSportsData(data);
-      setSportsList(data.map((s: Sport) => s.name));
-      if (data.length) initSport(data[selectedIndex], selectedIndex);
+      const data2 = data.filter((sport: Sport) => {
+        // console.log("Filtering sport:", sport.name);
+        return (sport.name !== "Gym" ? true : false);
+      })
+      console.log("Filtered Sports data set:", data2);
+      setSportsList(data2.map((sport: Sport) => {
+        return sport.name;
+      }))
+      if (data2.length) initSport(data[selectedIndex], selectedIndex);
+      console.log("Sports data loaded:", sportsList);
     };
     loadSports();
   }, [selectedIndex, spt]);

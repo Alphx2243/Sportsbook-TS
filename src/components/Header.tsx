@@ -27,7 +27,7 @@ export default function Navbar() {
   const mobileRef = useRef(null)
 
   const menuItems = ['Dashboard', 'Live Scores']
-  const facilities = ['Book Court', 'Past-Bookings', 'RTO', 'SG']
+  const facilities = ['Book Court', 'Past-Bookings', 'RTO', 'SG' , 'Gym-bookings']
 
   useEffect(() => {
     if (user) {
