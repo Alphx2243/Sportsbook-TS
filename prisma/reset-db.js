@@ -60,7 +60,7 @@ async function main() {
             courtsInUse: 0,
             numPlayers: 0,
             courtData: ['Court 1:0', 'Court 2:0', 'Court 3:0'],
-            equipments: {
+            Equipment: {
                 create: [
                     { name: 'Racket', total: 20 },
                     { name: 'Shuttle', total: 50 },
@@ -73,7 +73,7 @@ async function main() {
             courtsInUse: 0,
             numPlayers: 0,
             courtData: ['Court 1:0', 'Court 2:0'],
-            equipments: {
+            Equipment: {
                 create: [
                     { name: 'Racket', total: 10 },
                     { name: 'Ball', total: 20 },
@@ -86,7 +86,7 @@ async function main() {
             courtsInUse: 0,
             numPlayers: 0,
             courtData: ['Table 1:0', 'Table 2:0', 'Table 3:0', 'Table 4:0'],
-            equipments: {
+            Equipment: {
                 create: [
                     { name: 'Racket', total: 20 },
                     { name: 'Ball', total: 50 },
@@ -99,7 +99,7 @@ async function main() {
             courtsInUse: 0,
             numPlayers: 0,
             courtData: ['Court 1:0', 'Court 2:0'],
-            equipments: {
+            Equipment: {
                 create: [
                     { name: 'Racket', total: 15 },
                     { name: 'Ball', total: 40 },
