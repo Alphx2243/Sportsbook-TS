@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto')
 const { PrismaClient } = require('@prisma/client')
 const { PrismaPg } = require('@prisma/adapter-pg')
 const { Pool } = require('pg')
@@ -62,8 +63,8 @@ async function main() {
             courtData: ['Court 1:0', 'Court 2:0', 'Court 3:0'],
             Equipment: {
                 create: [
-                    { name: 'Racket', total: 20 },
-                    { name: 'Shuttle', total: 50 },
+                    { id: randomUUID(), name: 'Racket', total: 20, updatedAt: new Date() },
+                    { id: randomUUID(), name: 'Shuttle', total: 50, updatedAt: new Date() },
                 ],
             },
         },
@@ -75,8 +76,8 @@ async function main() {
             courtData: ['Court 1:0', 'Court 2:0'],
             Equipment: {
                 create: [
-                    { name: 'Racket', total: 10 },
-                    { name: 'Ball', total: 20 },
+                    { id: randomUUID(), name: 'Racket', total: 10, updatedAt: new Date() },
+                    { id: randomUUID(), name: 'Ball', total: 20, updatedAt: new Date() },
                 ],
             },
         },
@@ -88,8 +89,8 @@ async function main() {
             courtData: ['Table 1:0', 'Table 2:0', 'Table 3:0', 'Table 4:0'],
             Equipment: {
                 create: [
-                    { name: 'Racket', total: 20 },
-                    { name: 'Ball', total: 50 },
+                    { id: randomUUID(), name: 'Racket', total: 20, updatedAt: new Date() },
+                    { id: randomUUID(), name: 'Ball', total: 50, updatedAt: new Date() },
                 ],
             },
         },
@@ -101,8 +102,8 @@ async function main() {
             courtData: ['Court 1:0', 'Court 2:0'],
             Equipment: {
                 create: [
-                    { name: 'Racket', total: 15 },
-                    { name: 'Ball', total: 40 },
+                    { id: randomUUID(), name: 'Racket', total: 15, updatedAt: new Date() },
+                    { id: randomUUID(), name: 'Ball', total: 40, updatedAt: new Date() },
                 ],
             },
         },
@@ -404,6 +405,7 @@ async function main() {
             data: {
                 ...user,
                 password,
+                sportsExperience: [],
             },
         })
 
@@ -425,15 +427,15 @@ async function main() {
 
         for (const equipment of booking.equipments) {
             const equipmentRecord = await prisma.equipment.findFirst({
-                where: {
-                    name: equipment.name,
-                    sport: {
-                        is: {
-                            name: booking.sportName,
-                        },
-                    },
-                },
-            })
+    where: {
+        name: equipment.name,
+        Sport: {
+            is: {
+                name: booking.sportName,
+            },
+        },
+    },
+})
 
             if (!equipmentRecord) {
                 throw new Error(`Seed equipment not found: ${booking.sportName} - ${equipment.name}`)
@@ -460,6 +462,7 @@ async function main() {
         scanned: booking.scanned,
         BookingEquipment: {
             create: bookingEquipments.map(equipment => ({
+                id: randomUUID(),
                 equipmentId: equipment.equipmentId,
                 count: equipment.count,
             })),
