@@ -273,8 +273,8 @@ async function main() {
     ]
 
     const regularUserEmails = users
-        .filter((user) => user.role !== 'Admin')
-        .map((user) => user.email)
+        .filter(user => !user.role || user.role === 'user')
+        .map(user => user.email)
 
     const sportBookingTemplates = [
         {
@@ -446,23 +446,26 @@ async function main() {
         }
 
         const createdBooking = await prisma.booking.create({
-            data: {
-                userId: user.id,
-                sportName: booking.sportName,
-                numberOfPlayers: booking.numberOfPlayers,
-                startTime: booking.startTime,
-                endTime: booking.endTime,
-                date: booking.date,
-                qrDetail: null,
-                status: booking.status,
-                endDate: booking.endDate,
-                courtNo: booking.courtNo,
-                scanned: booking.scanned,
-                equipments: {
-                    create: bookingEquipments,
-                },
-            },
-        })
+    data: {
+        userId: user.id,
+        sportName: booking.sportName,
+        numberOfPlayers: booking.numberOfPlayers,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        date: booking.date,
+        qrDetail: null,
+        status: booking.status,
+        endDate: booking.endDate,
+        courtNo: booking.courtNo,
+        scanned: booking.scanned,
+        BookingEquipment: {
+            create: bookingEquipments.map(equipment => ({
+                equipmentId: equipment.equipmentId,
+                count: equipment.count,
+            })),
+        },
+    },
+})
 
         await prisma.booking.update({
             where: {
