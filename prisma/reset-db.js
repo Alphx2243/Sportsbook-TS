@@ -427,15 +427,15 @@ async function main() {
 
         for (const equipment of booking.equipments) {
             const equipmentRecord = await prisma.equipment.findFirst({
-    where: {
-        name: equipment.name,
-        Sport: {
-            is: {
-                name: booking.sportName,
-            },
-        },
-    },
-})
+                where: {
+                    name: equipment.name,
+                    Sport: {
+                        is: {
+                            name: booking.sportName,
+                        },
+                    },
+                },
+            })
 
             if (!equipmentRecord) {
                 throw new Error(`Seed equipment not found: ${booking.sportName} - ${equipment.name}`)
@@ -448,27 +448,27 @@ async function main() {
         }
 
         const createdBooking = await prisma.booking.create({
-    data: {
-        userId: user.id,
-        sportName: booking.sportName,
-        numberOfPlayers: booking.numberOfPlayers,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        date: booking.date,
-        qrDetail: null,
-        status: booking.status,
-        endDate: booking.endDate,
-        courtNo: booking.courtNo,
-        scanned: booking.scanned,
-        BookingEquipment: {
-            create: bookingEquipments.map(equipment => ({
-                id: randomUUID(),
-                equipmentId: equipment.equipmentId,
-                count: equipment.count,
-            })),
-        },
-    },
-})
+            data: {
+                userId: user.id,
+                sportName: booking.sportName,
+                numberOfPlayers: booking.numberOfPlayers,
+                startTime: booking.startTime,
+                endTime: booking.endTime,
+                date: booking.date,
+                qrDetail: null,
+                status: booking.status,
+                endDate: booking.endDate,
+                courtNo: booking.courtNo,
+                scanned: booking.scanned,
+                BookingEquipment: {
+                    create: bookingEquipments.map(equipment => ({
+                        id: randomUUID(),
+                        equipmentId: equipment.equipmentId,
+                        count: equipment.count,
+                    })),
+                },
+            },
+        })
 
         await prisma.booking.update({
             where: {
