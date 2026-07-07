@@ -175,10 +175,11 @@ export default function Navbar() {
             {user && (
               <button
                 onClick={() => setLogoutModalOpen(true)}
-                className="hidden md:flex items-center p-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all duration-300 cursor-pointer"
+                className="hidden md:flex h-10 items-center gap-2 px-3 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all duration-300 cursor-pointer font-semibold text-sm"
                 title="Logout"
               >
                 <LogOut className="w-5 h-5" />
+                <span>Logout</span>
               </button>
             )}
             <button
@@ -290,9 +291,10 @@ export default function Navbar() {
                 <Button
                   variant="danger"
                   size="md"
-                  className="mt-2 w-full h-12"
+                  className="mt-2 w-full h-12 flex items-center justify-center gap-2"
                   onClick={() => setLogoutModalOpen(true)}
                 >
+                  <LogOut className="w-4 h-4" />
                   Logout
                 </Button>
               )}

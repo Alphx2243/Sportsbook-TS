@@ -73,7 +73,7 @@ export default function AuthPage() {
         setSports(docs);
       }
       catch (err) {
-        console.log(err);
+        console.error('Failed to fetch sports:', err);
       }
     }
     if (mounted) fetchSports();
@@ -359,18 +359,8 @@ export default function AuthPage() {
   );
 }
 
-function SignupStepper({
-  formData,
-  setFormData,
-  sportsOptions,
-  levels,
-  onSportToggle,
-  onLevelChange,
-  showPassword,
-  setShowPassword,
-  setErrorModal,
-  showToast,
-  onSubmit
+function SignupStepper({ showToast, onSubmit, formData, setFormData, sportsOptions, levels, onSportToggle, onLevelChange, 
+  showPassword, setShowPassword, setErrorModal,
 }: SignupStepperProps) {
   const [step, setStep] = useState(1);
   const next = () => {
@@ -378,31 +368,23 @@ function SignupStepper({
       let valid = false;
       if (step === 1) valid = validateStep1();
       if (step === 2) valid = validateStep2();
-      if (valid) {
-        setStep((s: any) => s + 1);
-      }
-      else {
-        showToast({ message: "Please fill all the details correctly", type: 'warning' });
-      }
-    } catch (err) {
+      if (valid) setStep((s: any) => s + 1);
+      else showToast({ message: "Please fill all the details correctly", type: 'warning' });
+    } 
+    catch (err) {
       handleStepError(err);
     }
   }
-
   const handleStepError = (err: any) => {
     if (err.isDialog) {
-      setErrorModal({
-        isOpen: true,
-        title: "IIITD Email Required",
-        message: err.message
-      });
-    } else {
+      setErrorModal({ isOpen: true, title: "IIITD Email Required", message: err.message });
+    } 
+    else {
       console.error("Step error:", err);
       showToast({ message: err.message || "Something went wrong", type: 'error' });
     }
   };
   const prev = () => setStep((s) => s - 1);
-
   let validateStep1 = () => {
     let name = formData.name?.trim();
     let phn = formData.phoneNumber?.trim();
@@ -425,17 +407,8 @@ function SignupStepper({
   let validateStep2 = () => {
     let email = formData.email?.trim();
     let pass = formData.password;
-    if (!email || !pass || pass.length < 6) {
-      return false;
-    }
-    if (!email.endsWith("@iiitd.ac.in")) {
-      
-      
-      
-      
-      
-      return false;
-    }
+    if (!email || !pass || pass.length < 6) return false;
+    if (!email.endsWith("@iiitd.ac.in")) return false;
     return true;
   };
 
@@ -444,22 +417,14 @@ function SignupStepper({
     try {
       if (step < 3) {
         let valid = false;
-        if (step == 1) {
-          valid = validateStep1();
-        }
-        else if (step == 2) {
-          valid = validateStep2();
-        }
-        if (valid) {
-          next();
-        } else {
-          showToast({ message: "Please fill all the details correctly", type: 'warning' });
-        }
+        if (step == 1) valid = validateStep1();
+        else if (step == 2) valid = validateStep2();
+        if (valid) next();
+        else showToast({ message: "Please fill all the details correctly", type: 'warning' });
       }
-      else {
-        onSubmit(e);
-      }
-    } catch (err) {
+      else onSubmit(e);
+    } 
+    catch (err) {
       handleStepError(err);
     }
   };
@@ -626,11 +591,7 @@ function SignupStepper({
             >
               Back
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              className="flex-1"
-            >
+            <Button type="submit" variant="primary" className="flex-1">
               Create Account
             </Button>
           </div>
@@ -639,3 +600,4 @@ function SignupStepper({
     </motion.form>
   );
 }
+

@@ -36,17 +36,14 @@ export default function AgniCodersBooking() {
       if (!raw) return;
       const data = raw;
       
-      setSportsData(data);
       const data2 = data.filter((sport: Sport) => {
-        // console.log("Filtering sport:", sport.name);
         return (sport.name !== "Gym" ? true : false);
       })
-      console.log("Filtered Sports data set:", data2);
+      setSportsData(data2);
       setSportsList(data2.map((sport: Sport) => {
         return sport.name;
       }))
-      if (data2.length) initSport(data[selectedIndex], selectedIndex);
-      console.log("Sports data loaded:", sportsList);
+      if (data2.length) initSport(data2[Math.min(selectedIndex, data2.length - 1)], Math.min(selectedIndex, data2.length - 1));
     };
     loadSports();
   }, [selectedIndex, spt]);
@@ -93,11 +90,11 @@ export default function AgniCodersBooking() {
     e.preventDefault();
     try {
       const now = new Date(); 
-      const currentdate = now.toLocaleDateString("en-CA");
-      const currenttime = now.toTimeString().split(" ")[0];
+      const currentdate = formatISTDate(now);
+      const currenttime = formatISTTime(now);
       const endDateTime = new Date(now.getTime() + duration * 60 * 1000);
-      const Enddate = endDateTime.toLocaleDateString("en-CA");
-      const Endtime = endDateTime.toTimeString().split(" ")[0];
+      const Enddate = formatISTDate(endDateTime);
+      const Endtime = formatISTTime(endDateTime);
 
       const selectedSport = sportsData[selectedIndex];
       const isCapacityBased = selectedSport.maxCapacity && selectedSport.maxCapacity > 0;
@@ -314,4 +311,24 @@ export default function AgniCodersBooking() {
       </div>
     </div>
   );
+}
+
+function formatISTDate(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function formatISTTime(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    hourCycle: "h23",
+  }).format(date);
 }

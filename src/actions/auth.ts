@@ -13,6 +13,7 @@ import { getCurrentSessionUser, publicUserSelect, requireUser } from '@/lib/auth
 import { requireServerEnv } from '@/lib/env'
 import { requiredEmail, requiredString } from '@/lib/validation'
 import { slidingWindowRateLimiter } from '@/lib/rate-limiter'
+import { syncUserSportExperiences, withUserDisplay } from '@/lib/normalized-data'
 
 const PASSWORD_MIN_LENGTH = 12
 const PASSWORD_RESET_RESPONSE = 'If an account exists with this email, a reset link has been sent.'
@@ -34,19 +35,21 @@ export async function createAccount({ email, password, name, phone, rollNumber, 
         if (existingUser) throw new Error('User with this email already exists.')
 
         const hashedPassword = await bcrypt.hash(password, 10)
-        const user = await prisma.user.create({
-            data: {
-                email: normalizedEmail,
-                password: hashedPassword,
-                name: requiredString(name, 'Name'),
-                phone: requiredString(phone, 'Phone', 30),
-                rollNumber: requiredString(rollNumber, 'Roll number', 50),
-                sportsExperience: sportsExperience || [],
-                qrCodePath,
-            },
-            select: publicUserSelect,
+        const user = await prisma.$transaction(async (tx: any) => {
+            const createdUser = await tx.user.create({
+                data: {
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                    name: requiredString(name, 'Name'),
+                    phone: requiredString(phone, 'Phone', 30),
+                    rollNumber: requiredString(rollNumber, 'Roll number', 50),
+                    qrCodePath,
+                },
+            })
+            await syncUserSportExperiences(tx, createdUser.id, sportsExperience || [])
+            const userWithExperience = await tx.user.findUnique({ where: { id: createdUser.id }, select: publicUserSelect })
+            return withUserDisplay(userWithExperience)
         })
-        // await createSession(user)
         return ok(user)
     }
     catch (error: any) {
@@ -94,15 +97,18 @@ export async function updateUser(userId: string, data: {
         const actor = await getCurrentSessionUser()
         if (!actor || (actor.id !== userId && actor.role !== 'Admin')) throw new Error('Unauthorized.')
 
-        const user = await prisma.user.update({
-            where: { id: userId },
-            data: {
-                name: data.name !== undefined ? requiredString(data.name, 'Name') : undefined,
-                phone: data.phone !== undefined ? requiredString(data.phone, 'Phone', 30) : undefined,
-                rollNumber: data.rollNumber !== undefined ? requiredString(data.rollNumber, 'Roll number', 50) : undefined,
-                sportsExperience: data.sportsExperience,
-            },
-            select: publicUserSelect,
+        const user = await prisma.$transaction(async (tx: any) => {
+            const updatedUser = await tx.user.update({
+                where: { id: userId },
+                data: {
+                    name: data.name !== undefined ? requiredString(data.name, 'Name') : undefined,
+                    phone: data.phone !== undefined ? requiredString(data.phone, 'Phone', 30) : undefined,
+                    rollNumber: data.rollNumber !== undefined ? requiredString(data.rollNumber, 'Roll number', 50) : undefined,
+                },
+            });
+            await syncUserSportExperiences(tx, userId, data.sportsExperience)
+            const userWithExperience = await tx.user.findUnique({ where: { id: updatedUser.id }, select: publicUserSelect })
+            return withUserDisplay(userWithExperience)
         });
         return ok(user);
     }
@@ -133,7 +139,8 @@ export async function getUsers(): Promise<ActionResponse<{ documents: any[], tot
     try {
         await requireUser()
         const users = await prisma.user.findMany({ select: publicUserSelect });
-        return ok({ documents: users, total: users.length });
+        const documents = users.map(withUserDisplay)
+        return ok({ documents, total: documents.length });
     }
     catch (error: any) {
         console.error("Get users error:", error);

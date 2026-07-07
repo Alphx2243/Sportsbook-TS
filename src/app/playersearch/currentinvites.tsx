@@ -223,7 +223,7 @@ const CurrentInvites = () => {
         alert(res.error || "Failed to process invite");
       }
     } catch (err) {
-      console.log(err)
+      console.error('Failed to process invite:', err)
     }
   }
 
@@ -237,7 +237,7 @@ const CurrentInvites = () => {
         alert(res.error || "Failed to delete application");
       }
     } catch (err) {
-      console.log(err);
+      console.error('Failed to delete application:', err);
     }
   }
 

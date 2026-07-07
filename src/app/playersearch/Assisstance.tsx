@@ -39,7 +39,6 @@ const Assistance = () => {
       description, time: `${timeFrom} - ${timeTo}`,
       avdays, resolved,
     };
-    console.log('Submitting:', payload);
     alert(`Submitted ${option} for ${sportname}`);
     const response = await createApplication(payload);
     if (response.success) {

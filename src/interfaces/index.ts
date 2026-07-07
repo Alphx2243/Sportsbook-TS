@@ -52,6 +52,8 @@ export interface BookingEquipment {
 export interface Booking {
   id: string;
   userId: string;
+  sportId?: string | null;
+  courtId?: string | null;
   sportName: string;
   numberOfPlayers: number;
   startTime: string;
@@ -69,6 +71,7 @@ export interface Booking {
 
 export interface Match {
   id: string;
+  sportId?: string | null;
   sportName: string;
   team1: string;
   team2: string;
@@ -83,6 +86,7 @@ export interface GuideApplication {
   id: string;
   email: string;
   option: string;
+  sportId?: string | null;
   sportName: string;
   level?: string | null;
   resolved: boolean;
@@ -95,6 +99,7 @@ export interface GuideApplication {
 
 export interface Invite {
   id: string;
+  sportId?: string | null;
   sport: string;
   venue: string;
   date: string;

@@ -20,7 +20,6 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    
     const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3005', {
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
@@ -30,7 +29,6 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     });
 
     socketInstance.on('connect', () => {
-      console.log('[SOCKET] Connected:', socketInstance.id, 'via', socketInstance.io.engine.transport.name);
       setIsConnected(true);
     });
 
@@ -39,8 +37,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       setIsConnected(false);
     });
 
-    socketInstance.on('disconnect', (reason) => {
-      console.log('Disconnected from socket server:', reason);
+    socketInstance.on('disconnect', () => {
       setIsConnected(false);
     });
 

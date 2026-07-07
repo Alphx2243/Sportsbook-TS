@@ -16,7 +16,7 @@ import {
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ExtendTimerModal from '@/components/ui/ExtendTimerModal';
-import { expireBooking, getBookings, requestReturn } from '@/actions/bookings';
+import { completeBooking, expireBooking, getBookings } from '@/actions/bookings';
 import { useSocket } from '@/hooks/useSocket';
 
 interface Booking {
@@ -27,6 +27,7 @@ interface Booking {
     endTime: string;
     date: string;
     endDate?: string;
+    endAt?: string | Date;
     status: string;
     qrDetail?: string;
 }
@@ -52,12 +53,12 @@ export default function Dashboard() {
             const res = await getBookings({ userId: user.id });
             if (res.success) {
                 const booking = res.data.documents.find((b: any) => 
-                    b.status === 'active' || b.status === 'returned' || b.status === 'pending'
+                    b.status === 'active' || b.status === 'pending' || b.status === 'expired'
                 );
                 if (booking) {
                     setActiveBooking(booking);
                     if (booking.qrDetail) {
-                        const url = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(booking.qrDetail)}`;
+                        const url = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=16&data=${encodeURIComponent(booking.qrDetail)}`;
                         setQrUrl(url);
                     }
                 } else {
@@ -84,32 +85,54 @@ export default function Dashboard() {
     useEffect(() => {
         if (!activeBooking) return;
         
-        if (activeBooking.status === 'returned') {
-            setTimeLeft('Return Pending');
+        if (activeBooking.status === 'expired') {
+            setTimeLeft('Approval Pending');
             return;
         }
 
         if (activeBooking.status === 'pending') {
+            const endDateTime = activeBooking.endAt
+                ? new Date(activeBooking.endAt)
+                : parseISTDateTime(activeBooking.endDate || activeBooking.date, activeBooking.endTime);
+            const expirePendingBooking = () => {
+                if (expiringRef.current) return;
+                setTimeLeft('Expired');
+                expiringRef.current = true;
+                expireBooking(activeBooking.id).then(() => {
+                    fetchActiveBooking().finally(() => {
+                        expiringRef.current = false;
+                    });
+                }).catch(err => {
+                    console.error("Failed to expire unscanned booking:", err);
+                    expiringRef.current = false;
+                });
+            }
+            const difference = endDateTime.getTime() - Date.now();
+            if (difference <= 0) {
+                expirePendingBooking();
+                return;
+            }
             setTimeLeft('Ready to Scan');
-            return;
+            const pendingTimer = setTimeout(expirePendingBooking, difference);
+            return () => clearTimeout(pendingTimer);
         }
 
         const calculateTimeLeft = () => {
             if (expiringRef.current) return;
 
-            const now = new Date();
-            const endDateTimeStr = `${activeBooking.date}T${activeBooking.endTime}`;
-            const endDateTime = new Date(activeBooking.endDate ? `${activeBooking.endDate}T${activeBooking.endTime}` : endDateTimeStr);
+            const now = Date.now();
+            const endDateTime = activeBooking.endAt
+                ? new Date(activeBooking.endAt)
+                : parseISTDateTime(activeBooking.endDate || activeBooking.date, activeBooking.endTime);
 
-            const difference = endDateTime.getTime() - now.getTime();
+            const difference = endDateTime.getTime() - now;
 
             if (difference <= 0) {
                 setTimeLeft('Time Up');
                 expiringRef.current = true;
                 clearInterval(timer);
 
-                console.log(`Booking ${activeBooking.id} expired. Requesting return...`);
-                requestReturn(activeBooking.id).then(() => {
+                expireBooking(activeBooking.id).then(() => {
                     fetchActiveBooking().finally(() => {
                         expiringRef.current = false;
                     });
@@ -238,9 +261,9 @@ export default function Dashboard() {
                                                 <Image
                                                     src={qrUrl || '/placeholder.png'}
                                                     alt="Booking QR"
-                                                    width={160}
-                                                    height={160}
-                                                    className="w-40 h-40 relative z-10"
+                                                    width={240}
+                                                    height={240}
+                                                    className="w-60 h-60 relative z-10"
                                                 />
                                             </div>
 
@@ -253,7 +276,6 @@ export default function Dashboard() {
                                                         {activeBooking.sportName}
                                                         <span className="ml-3 text-primary/50">Court {activeBooking.courtNo}</span>
                                                     </h3>
-                                                    <p>Booking ID: {activeBooking.id}</p>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -270,7 +292,7 @@ export default function Dashboard() {
                                                         <div className="flex items-center gap-2 justify-center md:justify-start">
                                                             <div className={`w-2 h-2 rounded-full ${activeBooking.status === 'active' ? 'bg-green-500' : activeBooking.status === 'pending' ? 'bg-primary' : 'bg-secondary'}`} />
                                                             <p className={`text-lg font-bold capitalize ${activeBooking.status === 'active' ? 'text-green-500' : activeBooking.status === 'pending' ? 'text-primary' : 'text-secondary'}`}>
-                                                                {activeBooking.status === 'returned' ? 'Awaiting Approval' : activeBooking.status === 'pending' ? 'Awaiting Scan' : activeBooking.status}
+                                                                {activeBooking.status === 'expired' ? 'Awaiting Approval' : activeBooking.status === 'pending' ? 'Awaiting Scan' : activeBooking.status}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -280,7 +302,7 @@ export default function Dashboard() {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-primary hover:bg-primary/10 border-primary/20"
-                                                        disabled={activeBooking.status === 'returned' || activeBooking.status === 'pending'}
+                                                        disabled={activeBooking.status === 'expired' || activeBooking.status === 'pending'}
                                                         onClick={() => setShowExtensionModal(true)}
                                                     >
                                                         <Plus className="w-4 h-4 mr-2" />
@@ -290,16 +312,16 @@ export default function Dashboard() {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-yellow-500 hover:bg-yellow-500/10 border-yellow-500/20"
-                                                        disabled={activeBooking.status === 'returned'}
+                                                        disabled={activeBooking.status === 'expired' || activeBooking.status === 'pending'}
                                                         onClick={async () => {
-                                                            if (confirm('Are you sure you want to end this session? Admin will need to approve your return.')) {
-                                                                await requestReturn(activeBooking.id);
+                                                            if (confirm('Are you sure you want to end this session?')) {
+                                                                await completeBooking(activeBooking.id);
                                                                 fetchActiveBooking();
                                                             }
                                                         }}
                                                     >
                                                         <LogOut className="w-4 h-4 mr-2" />
-                                                        {activeBooking.status === 'returned' ? 'Awaiting Approval' : 'End Session'}
+                                                        {activeBooking.status === 'expired' ? 'Awaiting Approval' : 'End Session'}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -362,4 +384,10 @@ export default function Dashboard() {
             />
         </div>
     );
+}
+
+function parseISTDateTime(date: string, time: string) {
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour = 0, minute = 0, second = 0] = time.split(':').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, hour, minute, second) - 330 * 60 * 1000);
 }

@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { ActionResponse } from '@/interfaces'
 import { fail, ok } from '@/lib/action-response'
 import { ensureSelfOrAdmin } from '@/lib/auth-utils'
+import { dateToDateString, dateToTimeString } from '@/lib/normalized-data'
 
 export async function handleGymScan(userId: string): Promise<ActionResponse> {
     try {
@@ -57,11 +58,9 @@ export async function handleGymScan(userId: string): Promise<ActionResponse> {
 export async function getGymStats(userId: string): Promise<ActionResponse> {
     try {
         await ensureSelfOrAdmin(userId)
-        // console.log("Fetching gym stats for userId:", userId)  
         const logs = await prisma.gymLog.findMany({
             where: { userId }, orderBy: { entryTime: 'desc' }
         })
-        // console.log("Fetched logs:", logs)  
         const completedLogs = logs.filter((log: any) => log.exitTime !== null)
 
         const totalHours = completedLogs.reduce((acc: number, log: any) => acc + (log.duration || 0), 0)
@@ -76,9 +75,9 @@ export async function getGymStats(userId: string): Promise<ActionResponse> {
                 weeklyHours: (weeklyHours || 0).toFixed(1),
                 sessionsCount: logs.length,
                 history: logs.slice(0, 10).map((log: any) => ({
-                    id: log.id, date: new Date(log.entryTime).toLocaleDateString(),
-                    entryTime: new Date(log.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    exitTime: log.exitTime ? new Date(log.exitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'In Progress',
+                    id: log.id, date: dateToDateString(log.entryTime),
+                    entryTime: dateToTimeString(log.entryTime),
+                    exitTime: log.exitTime ? dateToTimeString(log.exitTime) : 'In Progress',
                     duration: log.duration ? `${log.duration} h` : '--', status: log.exitTime ? 'Completed' : 'Active'
                 }))
             })
@@ -92,15 +91,13 @@ export async function getGymStats(userId: string): Promise<ActionResponse> {
 export async function getGymBookings(userId: string): Promise<ActionResponse> {
     try{
         await ensureSelfOrAdmin(userId)
-        // console.log("Fetching gym stats for userId:", userId)  
         const logs = await prisma.gymLog.findMany({
             where: { userId }, orderBy: { entryTime: 'desc' }
         });
-        console.log("Fetched gym bookings logs:", logs);
         return ok({ documents: logs });
     }
     catch(error : any){
-        console.log('Get gym bookings error: ', error);
+        console.error('Get gym bookings error: ', error);
         return fail(error, 'Failed to get gym bookings')
     }
 }

@@ -6,6 +6,7 @@ import { ActionResponse } from '@/interfaces'
 import { fail, ok } from '@/lib/action-response'
 import { requireUser } from '@/lib/auth-utils'
 import { requiredEmail, requiredString } from '@/lib/validation'
+import { resolveSportByName, withApplicationDisplay } from '@/lib/normalized-data'
 
 export async function createApplication(data: any): Promise<ActionResponse> {
     try {
@@ -13,20 +14,23 @@ export async function createApplication(data: any): Promise<ActionResponse> {
         const email = requiredEmail(data.email)
         if (user.email !== email && user.role !== 'Admin') throw new Error('Unauthorized.')
 
+        const sportName = requiredString(data.sportname, 'Sport name', 100)
+        const sport = await resolveSportByName(prisma, sportName)
         const application = await prisma.guideApplication.create({
             data: {
                 email,
                 option: requiredString(data.option, 'Option', 50),
-                sportName: requiredString(data.sportname, 'Sport name', 100),
+                sportId: sport.id,
                 level: data.level ? requiredString(data.level, 'Level', 50) : null,
                 resolved: data.resolved ?? false,
                 time: data.time ? requiredString(data.time, 'Time', 100) : null,
                 description: data.description ? requiredString(data.description, 'Description', 1000) : null,
                 avDays: Array.isArray(data.avdays) ? data.avdays.map((d: unknown) => requiredString(d, 'Available day', 20)).join(',') : data.avdays,
             },
+            include: { sport: true },
         })
         revalidatePath('/')
-        return ok(application)
+        return ok(withApplicationDisplay(application))
     }
     catch (error: any) {
         console.error('Create application error:', error);
@@ -40,8 +44,9 @@ export async function getApplications(): Promise<ActionResponse<any[]>> {
         const applications = await prisma.guideApplication.findMany({
             where: { resolved: false },
             orderBy: { createdAt: 'desc' },
+            include: { sport: true },
         })
-        return ok(applications)
+        return ok(applications.map(withApplicationDisplay))
     } catch (error: any) {
         console.error('Get applications error:', error)
         return fail(error, 'Failed to get applications')

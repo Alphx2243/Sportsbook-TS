@@ -4,19 +4,21 @@ import prisma from '@/lib/prisma'
 import { ActionResponse } from '@/interfaces'
 import { fail, ok } from '@/lib/action-response'
 import { requiredString } from '@/lib/validation'
+import { dateToDateString, dateToTimeString, getISTDayRange, parseBookingDateTime, withSportAvailability } from '@/lib/normalized-data'
 
-function withEquipments(sport: any) {
+async function withSportView(sport: any) {
     const { Equipment, ...rest } = sport
-    return { ...rest, equipments: Equipment || [] }
+    const withAvailability = await withSportAvailability(prisma, rest)
+    return { ...withAvailability, equipments: Equipment || [] }
 }
 
 export async function getSports(): Promise<ActionResponse<{ documents: any[], total: number }>> {
     try {
         const sports = await prisma.sport.findMany({
             orderBy: { name: 'asc' },
-            include: { Equipment: true }
+            include: { Equipment: true, courts: { where: { isActive: true }, orderBy: { courtNumber: 'asc' } } }
         })
-        const documents = sports.map(withEquipments)
+        const documents = await Promise.all(sports.map(withSportView))
         return ok({ documents, total: documents.length })
     }
     catch (error: any) {
@@ -29,10 +31,10 @@ export async function getSport(id: string): Promise<ActionResponse> {
     try {
         const sport = await prisma.sport.findUnique({
             where: { id },
-            include: { Equipment: true },
+            include: { Equipment: true, courts: { where: { isActive: true }, orderBy: { courtNumber: 'asc' } } },
         })
         if (!sport) return fail(new Error('Sport not found'))
-        return ok(withEquipments(sport))
+        return ok(await withSportView(sport))
     }
     catch (error: any) {
         console.error('Get sport error:', error);
@@ -47,21 +49,22 @@ export async function getSportAnalytics(sportName: string): Promise<ActionRespon
         const dates = Array.from({ length: 7 }, (_: unknown, i: number) => {
             const d = new Date(today);
             d.setDate(today.getDate() - (6 - i));
-            return d.toISOString().split('T')[0];
+            return dateToDateString(d);
         });
+        const startRange = getISTDayRange(dates[0]);
+        const endRange = getISTDayRange(dates[dates.length - 1]);
 
         const bookings = await prisma.booking.findMany({
             where: {
-                sportName: safeSportName,
-                date: { in: dates }
+                sport: { name: safeSportName },
+                startAt: { gte: startRange.gte, lt: endRange.lt }
             }
         });
 
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const dayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' });
         const weeklyAttendance = dates.map((date: string) => {
-            const dateObj = new Date(date);
-            const dayName = days[dateObj.getDay()];
-            const dayBookings = bookings.filter((b: any) => b.date === date);
+            const dayName = dayFormatter.format(parseBookingDateTime(date, '12:00:00'));
+            const dayBookings = bookings.filter((b: any) => dateToDateString(b.startAt) === date);
             const totalPlayers = dayBookings.reduce((sum: number, b: any) => sum + (b.numberOfPlayers || 0), 0);
             return { day: dayName, Students: totalPlayers };
         });
@@ -70,7 +73,7 @@ export async function getSportAnalytics(sportName: string): Promise<ActionRespon
         const peakHours = timeSlots.map((slot: string) => {
             const [startHour, endHour] = slot.split('-').map(Number);
             const slotBookings = bookings.filter((b: any) => {
-                const hour = parseInt(b.startTime.split(':')[0]);
+                const hour = Number(dateToTimeString(b.startAt).split(':')[0]);
                 return hour >= startHour && hour < endHour;
             });
             const totalUsersInSlot = slotBookings.reduce((sum: number, b: any) => sum + (b.numberOfPlayers || 0), 0);

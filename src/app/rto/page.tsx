@@ -341,7 +341,6 @@ const DataAnalysis = ({ sport }: { sport: string }) => {
                   backgroundColor: chartColors.tooltipBg,
                   borderColor: chartColors.tooltipBorder,
                   borderRadius: '16px',
-                  // backdropBlur: '12px',
                   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
                   border: '1px solid rgba(255,255,255,0.1)',
                   padding: '12px'

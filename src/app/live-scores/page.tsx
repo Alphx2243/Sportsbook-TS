@@ -50,7 +50,6 @@ export default function LiveScoring() {
         console.error('Error fetching matches:', err);
       }
     };
-    console.log("Matches update received via socket, refreshing...");
     fetchMatches();
   }, 'matches_updated');
 

@@ -18,8 +18,6 @@ export default function PastBookings() {
           try {
               const response = await getGymBookings(user.id)
               setBookings(response.success ? response.data.documents : [])
-              console.log('User in PastBookings:', user)  // Debugging line
-              console.log("Bookings state:", bookings)  // Debugging line
       }
       catch (error) {
         console.error('Error fetching bookings:', error)
@@ -167,8 +165,6 @@ function BookingCard({ booking, index }: { booking: any; index: number }) {
 }
 
 function GymCard({gymBooking, index} : {gymBooking: any, index: number}) {
-    console.log("Received to represent gymBooking: ", gymBooking);
-    // console.log((typeof gymBooking.entryTime));
     return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -196,7 +192,6 @@ function GymCard({gymBooking, index} : {gymBooking: any, index: number}) {
               <div className="flex items-center gap-1.5 text-gray-400 text-sm">
                 <Clock className="w-4 h-4" />
                 <span>{ParseTime(gymBooking.entryTime)}</span>
-                {/* <span>{gymBooking.entryTime} - {gymBooking.exitTime}</span> */}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2">
@@ -207,7 +202,6 @@ function GymCard({gymBooking, index} : {gymBooking: any, index: number}) {
               <div className="flex items-center gap-1.5 text-gray-400 text-sm">
                 <Clock className="w-4 h-4" />
                 <span>{ParseTime(gymBooking.exitTime)}</span>
-                {/* <span>{gymBooking.entryTime} - {gymBooking.exitTime}</span> */}
               </div>
             </div>
           </div>
@@ -218,16 +212,25 @@ function GymCard({gymBooking, index} : {gymBooking: any, index: number}) {
   )
 }
 function ParseTime(dateString: object): string {
-    const Date_elements = dateString.toString().split(" ")
-    console.log(Date_elements);
-    let date = String(Date_elements[4]);
-    // for(let i = 0; i < 5; i++) date = date + Date_elements[i] + " ";
-    return date;
+    if (!dateString) return '-'
+    const date = new Date(String(dateString))
+    return Number.isNaN(date.getTime()) ? '-' : new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      hourCycle: 'h23',
+    }).format(date)
 }
 
 function ParseDate(dateString: object): string {
-    const Date_elements = dateString.toString().split(" ")
-    console.log(Date_elements);
-    let date = String(Date_elements[0]) + " " + String(Date_elements[1]) + " " + String(Date_elements[2]) + " " + String(Date_elements[3]);
-    return date;
+    if (!dateString) return '-'
+    const date = new Date(String(dateString))
+    return Number.isNaN(date.getTime()) ? '-' : new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date)
 }

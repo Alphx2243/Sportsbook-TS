@@ -1,17 +1,9 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSport } from '@/contexts/SportsContext'
-import {
-  CalendarIcon,
-  ActivityIcon,
-  MapPinIcon,
-  UsersIcon,
-  ClockIcon,
-  Trophy,
-} from 'lucide-react'
+import { CalendarIcon, ActivityIcon, MapPinIcon, UsersIcon, ClockIcon, Trophy, } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Button from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -59,6 +51,20 @@ const devs = [
     email : "kirat24303@iiitd.ac.in",
   }
 ]
+
+const sportImages = {
+  'badminton': '/images/sports/badminton.jpg',
+  'basketball': '/images/sports/basketball.jpg',
+  'tennis': '/images/sports/tennis.jpg',
+  'volleyball': '/images/sports/volleyball.jpg',
+  'cricket': '/images/sports/cricket.jpg',
+  'table tennis': '/images/sports/table-tennis.jpg',
+  'lawn tennis': '/images/sports/lawn-tennis.jpg',
+  'football': '/images/sports/football.jpg',
+  'swimming': '/images/sports/swimming.webp',
+  'gym': '/images/sports/gym.jpg',
+  'squash': '/images/sports/squash.jpg',
+}
 
 function DevelopersSection(){
   return (
@@ -161,19 +167,7 @@ function FeaturesSection() {
   )
 }
 
-const sportImages = {
-  'badminton': '/images/sports/badminton.jpg',
-  'basketball': '/images/sports/basketball.jpg',
-  'tennis': '/images/sports/tennis.jpg',
-  'volleyball': '/images/sports/volleyball.jpg',
-  'cricket': '/images/sports/cricket.jpg',
-  'table tennis': '/images/sports/table-tennis.jpg',
-  'lawn tennis': '/images/sports/lawn-tennis.jpg',
-  'football': '/images/sports/football.jpg',
-  'swimming': '/images/sports/swimming.webp',
-  'gym': '/images/sports/gym.jpg',
-  'squash': '/images/sports/squash.jpg',
-}
+
 
 function getSportImage(name: string | undefined) {
   if (!name) return '/images/sports/default-sport.jpg';
@@ -356,7 +350,6 @@ export default function Home() {
       </section>
 
       <FeaturesSection />
-      {/* <DevelopersSection /> */}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma'
 import { verifySessionToken } from '@/lib/auth-config'
 import { cookies } from 'next/headers'
+import { withUserDisplay } from '@/lib/normalized-data'
 
 export const publicUserSelect = {
   id: true,
@@ -8,7 +9,7 @@ export const publicUserSelect = {
   name: true,
   phone: true,
   rollNumber: true,
-  sportsExperience: true,
+  sportExperiences: { include: { sport: true } },
   qrCodePath: true,
   role: true,
   createdAt: true,
@@ -33,10 +34,11 @@ export async function getCurrentSessionUser() {
   const payload = await verifySessionToken(session.value)
   if (!payload.userId) return null
 
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: publicUserSelect,
   })
+  return user ? withUserDisplay(user) : null
 }
 
 export async function requireUser() {

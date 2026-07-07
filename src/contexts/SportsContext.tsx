@@ -18,13 +18,12 @@ export const SportsProvider = ({ children }: { children: ReactNode }) => {
             }
             const sportsData = await getSports();
             const docs = sportsData.success ? sportsData.data.documents : [];
-            console.log('Refetched sports data, count:', docs.length);
             sportsRef.current = docs;
             setSports(docs);
             setLoading(false);
         }
         catch (error) {
-            console.log(error);
+            console.error('Failed to fetch sports:', error);
             setLoading(false);
         }
     }, [])
