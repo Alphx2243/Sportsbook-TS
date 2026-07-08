@@ -16,7 +16,7 @@ import {
 import Button from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ExtendTimerModal from '@/components/ui/ExtendTimerModal';
-import { completeBooking, expireBooking, getBookings } from '@/actions/bookings';
+import { expireBooking, getBookings, requestReturn } from '@/actions/bookings';
 import { useSocket } from '@/hooks/useSocket';
 
 interface Booking {
@@ -53,7 +53,7 @@ export default function Dashboard() {
             const res = await getBookings({ userId: user.id });
             if (res.success) {
                 const booking = res.data.documents.find((b: any) => 
-                    b.status === 'active' || b.status === 'pending' || b.status === 'expired'
+                    b.status === 'active' || b.status === 'pending' || b.status === 'returned' || b.status === 'expired'
                 );
                 if (booking) {
                     setActiveBooking(booking);
@@ -85,7 +85,7 @@ export default function Dashboard() {
     useEffect(() => {
         if (!activeBooking) return;
         
-        if (activeBooking.status === 'expired') {
+        if (activeBooking.status === 'returned' || activeBooking.status === 'expired') {
             setTimeLeft('Approval Pending');
             return;
         }
@@ -292,7 +292,7 @@ export default function Dashboard() {
                                                         <div className="flex items-center gap-2 justify-center md:justify-start">
                                                             <div className={`w-2 h-2 rounded-full ${activeBooking.status === 'active' ? 'bg-green-500' : activeBooking.status === 'pending' ? 'bg-primary' : 'bg-secondary'}`} />
                                                             <p className={`text-lg font-bold capitalize ${activeBooking.status === 'active' ? 'text-green-500' : activeBooking.status === 'pending' ? 'text-primary' : 'text-secondary'}`}>
-                                                                {activeBooking.status === 'expired' ? 'Awaiting Approval' : activeBooking.status === 'pending' ? 'Awaiting Scan' : activeBooking.status}
+                                                                {activeBooking.status === 'returned' || activeBooking.status === 'expired' ? 'Awaiting Approval' : activeBooking.status === 'pending' ? 'Awaiting Scan' : activeBooking.status}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -302,7 +302,7 @@ export default function Dashboard() {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-primary hover:bg-primary/10 border-primary/20"
-                                                        disabled={activeBooking.status === 'expired' || activeBooking.status === 'pending'}
+                                                        disabled={activeBooking.status === 'returned' || activeBooking.status === 'expired' || activeBooking.status === 'pending'}
                                                         onClick={() => setShowExtensionModal(true)}
                                                     >
                                                         <Plus className="w-4 h-4 mr-2" />
@@ -312,16 +312,16 @@ export default function Dashboard() {
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-yellow-500 hover:bg-yellow-500/10 border-yellow-500/20"
-                                                        disabled={activeBooking.status === 'expired' || activeBooking.status === 'pending'}
+                                                        disabled={activeBooking.status === 'returned' || activeBooking.status === 'expired' || activeBooking.status === 'pending'}
                                                         onClick={async () => {
-                                                            if (confirm('Are you sure you want to end this session?')) {
-                                                                await completeBooking(activeBooking.id);
+                                                            if (confirm('Submit this session for equipment return approval?')) {
+                                                                await requestReturn(activeBooking.id);
                                                                 fetchActiveBooking();
                                                             }
                                                         }}
                                                     >
                                                         <LogOut className="w-4 h-4 mr-2" />
-                                                        {activeBooking.status === 'expired' ? 'Awaiting Approval' : 'End Session'}
+                                                        {activeBooking.status === 'returned' || activeBooking.status === 'expired' ? 'Awaiting Approval' : 'End Session'}
                                                     </Button>
                                                 </div>
                                             </div>

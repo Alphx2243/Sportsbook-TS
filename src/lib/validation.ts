@@ -1,4 +1,4 @@
-const BOOKING_STATUSES = new Set(['pending', 'active', 'expired', 'completed'])
+const BOOKING_STATUSES = new Set(['pending', 'active', 'returned', 'expired', 'completed'])
 const MATCH_STATUSES = new Set(['live', 'upcoming', 'finished'])
 
 export function requiredString(value: unknown, field: string, maxLength = 255): string {

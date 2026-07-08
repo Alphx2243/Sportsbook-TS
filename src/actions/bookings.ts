@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { ActionResponse, CreateBookingInput, UpdateBookingInput } from '@/interfaces'
 import { fail, ok } from '@/lib/action-response'
-import { bookingUserSelect, ensureSelfOrAdmin, requireUser } from '@/lib/auth-utils'
+import { bookingUserSelect, ensureAdmin, ensureSelfOrAdmin, requireUser } from '@/lib/auth-utils'
 import { bookingStatus, equipmentIssues, positiveInt, requiredString } from '@/lib/validation'
 import { createBookingQrPayload } from '@/lib/booking-qr'
 import { dateToDateString, dateToTimeString, getISTDayRange, parseBookingDateTime, resolveCourtByNo, resolveSportByName, withBookingDisplay } from '@/lib/normalized-data'
@@ -20,12 +20,12 @@ export async function createBooking(data: CreateBookingInput): Promise<ActionRes
             const existingBooking = await tx.booking.findFirst({
                 where: {
                     userId: data.userId,
-                    status: { in: ['pending', 'active', 'expired'] }
+                    status: { in: ['pending', 'active', 'returned', 'expired'] }
                 }
             })
 
             if (existingBooking) {
-                const msg = existingBooking.status === 'active' || existingBooking.status === 'expired'
+                const msg = existingBooking.status === 'active' || existingBooking.status === 'returned' || existingBooking.status === 'expired'
                     ? 'You already have an active booking.'
                     : 'You already have a pending booking.';
                 throw new Error(`${msg} Please complete it before booking again.`)
@@ -224,11 +224,11 @@ export async function expireBooking(bookingId: string): Promise<ActionResponse> 
 
 export async function completeBooking(bookingId: string): Promise<ActionResponse> {
     try {
-        await assertBookingAccess(bookingId)
+        await ensureAdmin()
         const endedAt = new Date()
         await prisma.$transaction(async (tx: any) => {
             const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
-            if (!booking || (booking.status !== 'active' && booking.status !== 'expired')) {
+            if (!booking || (booking.status !== 'returned' && booking.status !== 'expired' && booking.status !== 'active')) {
                 throw new Error('Booking not found or cannot be completed');
             }
 
@@ -239,9 +239,12 @@ export async function completeBooking(bookingId: string): Promise<ActionResponse
 
             await tx.booking.update({
                 where: { id: bookingId },
-                data: { status: 'completed', endAt: endedAt }
+                data: {
+                    status: 'completed',
+                    endAt: booking.status === 'active' ? endedAt : undefined,
+                }
             });
-            if (booking.status === 'active' || booking.scanned) {
+            if (booking.status === 'active' || booking.status === 'returned' || booking.scanned) {
                 await restoreBookingEquipment(tx, bookingId);
             }
         });
@@ -263,6 +266,39 @@ export async function completeBooking(bookingId: string): Promise<ActionResponse
     }
 }
 
+export async function requestReturn(bookingId: string): Promise<ActionResponse> {
+    try {
+        await assertBookingAccess(bookingId)
+        const returnedAt = new Date()
+        await prisma.$transaction(async (tx: any) => {
+            const [booking]: any = await tx.$queryRaw`SELECT * FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
+            if (!booking || booking.status !== 'active') {
+                throw new Error('Booking not found or not active');
+            }
+
+            await tx.booking.update({
+                where: { id: bookingId },
+                data: { status: 'returned', endAt: returnedAt }
+            });
+        });
+
+        revalidatePath('/')
+        revalidatePath('/dashboard')
+        revalidatePath('/book-court')
+
+        const bookingForSport: any = await prisma.booking.findUnique({ where: { id: bookingId }, include: { sport: true } });
+        if (bookingForSport) {
+            await notifySportUpdate(bookingForSport.sport.name, 'availability_changed');
+        }
+
+        return ok(null)
+    }
+    catch (error: any) {
+        console.error('Request return error:', error)
+        return fail(error, 'Failed to request return approval')
+    }
+}
+
 export async function secureBooking(data: CreateBookingInput): Promise<ActionResponse> {
     try {
         await ensureSelfOrAdmin(data.userId)
@@ -271,10 +307,10 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
             await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${data.userId} FOR UPDATE`;
 
             const existingBooking = await tx.booking.findFirst({
-                where: { userId: data.userId, status: { in: ['pending', 'active', 'expired'] } }
+                where: { userId: data.userId, status: { in: ['pending', 'active', 'returned', 'expired'] } }
             })
             if (existingBooking) {
-                const msg = existingBooking.status === 'active' || existingBooking.status === 'expired'
+                const msg = existingBooking.status === 'active' || existingBooking.status === 'returned' || existingBooking.status === 'expired'
                     ? 'You already have an active booking.'
                     : 'You already have a pending booking.';
                 throw new Error(`${msg} Please complete it before booking again.`)
@@ -284,7 +320,7 @@ export async function secureBooking(data: CreateBookingInput): Promise<ActionRes
             if (!sport) throw new Error('Sport not found.')
 
             const isCapacityBased = sport.maxCapacity && sport.maxCapacity > 0
-            const activeBookings = await tx.booking.findMany({ where: { sportId: sport.id, status: { in: ['pending', 'active'] } } })
+            const activeBookings = await tx.booking.findMany({ where: { sportId: sport.id, status: { in: ['pending', 'active', 'returned'] } } })
             const alreadyBookedPlayers = activeBookings.reduce((sum: number, booking: any) => sum + (booking.numberOfPlayers || 0), 0)
             const numPlayers = positiveInt(data.numberOfPlayers, 'Number of players')
             const courtNo = data.CourtNo
